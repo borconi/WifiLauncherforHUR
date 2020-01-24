@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Wifi Launcher for HUR</string>
+    <string name="chosedevice">Select your car\'s BT</string>
+    <string name="starttether">Start tethering</string>
+    <string name="macTitile">BT Adapters</string>
+    <string name="macDesc">Select on which BT device to start the app.</string>
+    <string name="settings">Settings</string>
+    <string name="wifiTitle">Connect to car\s Wifi</string>
+    <string name="wifidesc">Only available on Pie and above, make sure you turned on the incoming listener in HUR. Requires HUR 4.6 or higher!</string>
+    <string name="wifiDirect">Initiate Wifi Direct Connection</string>
+    <string name="startserver">Start Headunit Server</string>
+    <string name="reqroot">This requires root access</string>
+    <string name="permission_denied_loc">Without location permissions app won\'t be able to access Wifi network names which is crucial part for automation.</string>
+    <string name="permission_denied">Error</string>
+    <string name="need_draw_over_other_apps">Starting with Android 10, background services are restricted to start apps/activities on users screen, meaning it won\'t be able to launch Android Auto without this permission.</string>
+    <string name="stopbt">Exit on BT</string>
+    <string name="stopbt_desc">Exit car mode and stop Wifi Launcher when BT disconnects (some cars constantly drops BT connection meaning app can randomly quit) in which case you should disable this option.</string>
+</resources>

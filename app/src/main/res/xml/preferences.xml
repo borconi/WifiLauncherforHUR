@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:title="@string/settings"
+        android:key="prefgroup"/>
+
+    <MultiSelectListPreference
+
+    android:enabled="true"
+    android:key="mac"
+    android:persistent="true"
+    android:summary="@string/macTitile"
+    android:title="@string/macDesc" />
+
+    <SwitchPreference
+    android:enabled="true"
+    android:key="stoponBT"
+    android:persistent="true"
+    android:title="@string/stopbt"
+    android:summary="@string/stopbt_desc" />
+
+<SwitchPreference
+    android:enabled="true"
+    android:key="tether"
+    android:persistent="true"
+    android:title="@string/starttether" />
+
+    <SwitchPreference
+    android:enabled="true"
+    android:key="wifidirect"
+    android:persistent="true"
+    android:title="@string/wifiDirect" />
+
+    <SwitchPreference
+    android:enabled="true"
+    android:key="startserver"
+    android:persistent="true"
+    android:title="@string/startserver"
+    android:summary="@string/reqroot" />
+
+
+
+</PreferenceScreen>
