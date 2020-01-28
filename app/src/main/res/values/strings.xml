@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Wifi Launcher for HUR</string>
+    <string name="app_name">Wifi Launcher</string>
     <string name="chosedevice">Select your car\'s BT</string>
     <string name="starttether">Start tethering</string>
     <string name="macTitile">BT Adapters</string>

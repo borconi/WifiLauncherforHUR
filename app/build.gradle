@@ -7,8 +7,8 @@ android {
         applicationId "com.borconi.emil.wifilauncherforhur"
         minSdkVersion 21
         targetSdkVersion 28
-        versionCode 6
-        versionName "1.5"
+        versionCode 8
+        versionName "2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }

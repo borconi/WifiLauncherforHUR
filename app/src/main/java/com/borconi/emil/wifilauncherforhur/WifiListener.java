@@ -60,6 +60,7 @@ public class WifiListener extends Wifip2pService {
         {
             /* Only run this if we are on pie */
             WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            assert wifi != null;
             if (!wifi.isWifiEnabled())
                 wifi.setWifiEnabled(true);
 
@@ -86,8 +87,9 @@ public class WifiListener extends Wifip2pService {
                 wifiConfig.SSID = String.format("\"%s\"", "HUR");
                 wifiConfig.preSharedKey = String.format("\"%s\"", "AndroidAutoConnect");
                 netId = wifi.addNetwork(wifiConfig);
-                wifi.startScan();
+                //wifi.startScan();
             }
+            BTReceiver.netid=netId;
             if (wifi.getConnectionInfo().getNetworkId()!=netId) {
                 Log.d("HU-Wifi","Start up, not connected to HUR network, is it in range?");
 
@@ -223,7 +225,7 @@ public class WifiListener extends Wifip2pService {
                 stopSelf();
                 return;
             }
-            if (intent.getAction()==WifiManager.SCAN_RESULTS_AVAILABLE_ACTION) {
+           /* if (intent.getAction()==WifiManager.SCAN_RESULTS_AVAILABLE_ACTION) {
                 final WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                 Log.d("HU-Wifi","Got a scan result");
                 if (wifi.getConnectionInfo().getNetworkId()!=netId) {
@@ -251,7 +253,7 @@ public class WifiListener extends Wifip2pService {
                                                   }
                                               },30000); //Pie is throlling one scan to 30 seconds.
                 }
-            }
+            }*/
             if (intent.getAction().equalsIgnoreCase("android.app.action.EXIT_CAR_MODE"))
             {
                 stopSelf();

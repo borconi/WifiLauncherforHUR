@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 
 import android.content.res.Configuration;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.preference.PreferenceManager;
@@ -18,7 +19,7 @@ import java.util.Set;
 
 public class BTReceiver extends BroadcastReceiver {
 
-
+    static public int netid;
     @Override
     public void onReceive(Context context, Intent intent) {
         BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
@@ -27,6 +28,9 @@ public class BTReceiver extends BroadcastReceiver {
 
 
         Set<String> aux = prefs.getStringSet("mac", null);
+        if (aux==null)
+            return;
+
         Log.d("BT-RECEIVER", intent.getAction()+" want: "+aux+", got: "+ device.getAddress());
 
         if ((intent.getAction().equalsIgnoreCase("android.bluetooth.device.action.ACL_CONNECTED") && aux.contains(device.getAddress()))) {
@@ -45,14 +49,22 @@ public class BTReceiver extends BroadcastReceiver {
         }
         if (intent.getAction().equalsIgnoreCase("android.bluetooth.device.action.ACL_DISCONNECTED")  && aux.contains(device.getAddress())) {
             Log.d("BT-RECEIVER","BT Disconnected");
-            if (!PreferenceManager.getDefaultSharedPreferences(context).getBoolean("stopbt",true))
+            if (!PreferenceManager.getDefaultSharedPreferences(context).getBoolean("stoponBT",true))
                 return;
 
+            Log.d("BT-RECEIVER","We should exit the listener");
             UiModeManager uiModeManager = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
+            assert uiModeManager != null;
             uiModeManager.disableCarMode(UiModeManager.DISABLE_CAR_MODE_GO_HOME);
           //  WifiListener.isConnected=false;
             Intent intent1=new Intent(context,WifiListener.class);
             context.stopService(intent1);
+
+            WifiManager wifi = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            assert wifi != null;
+
+            if (wifi.getConnectionInfo().getSSID().contains("HUR"))
+                wifi.disconnect();
         }
         }
 
