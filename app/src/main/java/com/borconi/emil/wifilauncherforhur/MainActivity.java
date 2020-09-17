@@ -4,18 +4,22 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.MacAddress;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.Uri;
+
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.MultiSelectListPreference;
-import android.preference.PreferenceActivity;
-import android.preference.PreferenceCategory;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceScreen;
-import android.preference.SwitchPreference;
+
+
 import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -24,16 +28,29 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 
+
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.preference.MultiSelectListPreference;
+import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceManager;
+import androidx.preference.PreferenceScreen;
+import androidx.preference.SwitchPreference;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.scottyab.rootbeer.RootBeer;
 
-public class MainActivity extends PreferenceActivity  {
+import java.net.InetAddress;
+import java.util.Set;
+
+public class MainActivity extends AppCompatActivity {
 
 
     private static final int ACTION_MANAGE_OVERLAY_PERMISSION_REQUEST_CODE = 12345;
@@ -42,15 +59,49 @@ public class MainActivity extends PreferenceActivity  {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        checkpermission();
-        getFragmentManager().beginTransaction().replace(android.R.id.content, new MyPreferenceFragment()).commit();
-
+        getSupportFragmentManager().beginTransaction().replace(android.R.id.content, new MyPreferenceFragment()).commit();
 
 
     }
     @Override
     protected void onResume(){
         super.onResume();
+
+        Set<String> enabledapps = NotificationManagerCompat.getEnabledListenerPackages(this);
+        final SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+
+        boolean havepermission = false;
+        for (String currapp : enabledapps) {
+            if (currapp.equalsIgnoreCase("com.borconi.emil.wifilauncherforhur"))
+                havepermission = true;
+        }
+
+        if (!havepermission && !sp.getBoolean("ignore_notification",false)) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle(getResources().getString(R.string.perm_req));
+            builder.setMessage(getResources().getString(R.string.perm_desc));
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
+                }
+            });
+            builder.setNegativeButton(getString(R.string.notnow), new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    dialog.dismiss();
+                }
+            });
+            builder.setNeutralButton(getString(R.string.ignore),new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    sp.edit().putBoolean("ignore_notification",true).commit();
+                    dialog.dismiss();
+                }
+            });
+            AlertDialog notification_dialog = builder.show();
+        }
+        
+        
+        
+        checkpermission();
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
             if (!Settings.canDrawOverlays(this)) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -71,23 +122,18 @@ public class MainActivity extends PreferenceActivity  {
 
             }
         }
+
+
     }
 
     protected void checkpermission() {
-        String [] permissions = { Manifest.permission.ACCESS_COARSE_LOCATION};
+        String [] permissions = { Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.CHANGE_NETWORK_STATE};
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+            ActivityCompat.requestPermissions(this, permissions, 200);
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.CHANGE_NETWORK_STATE) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(this, permissions, 200);
 
 
-
-       /*
-       Intent intent1=new Intent(this,WifiListener.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent1);
-        }
-        else
-            startService(intent1);
-            */
 
     }
 
@@ -146,7 +192,7 @@ public class MainActivity extends PreferenceActivity  {
         }
     }
 
-    public static class MyPreferenceFragment extends PreferenceFragment     {
+    public static class MyPreferenceFragment extends PreferenceFragmentCompat {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
             LinearLayout v = (LinearLayout) super.onCreateView(inflater, container, savedInstanceState);
@@ -158,7 +204,7 @@ public class MainActivity extends PreferenceActivity  {
             fab.setSize(FloatingActionButton.SIZE_NORMAL);
             fab.setId(0);
             fab.setTag("fab");
-            ll.setId(1);
+            ll.setId(ViewCompat.generateViewId());
             ll.addView(fab);
             fab.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
@@ -177,11 +223,12 @@ public class MainActivity extends PreferenceActivity  {
             return v;
         }
 
+
+
         @Override
-        public void onCreate(final Bundle savedInstanceState)
-        {
-            super.onCreate(savedInstanceState);
-            addPreferencesFromResource(R.xml.preferences);
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+
+            setPreferencesFromResource(R.xml.preferences, rootKey);
 
 
             MultiSelectListPreference ms = (MultiSelectListPreference) findPreference("mac");
@@ -194,9 +241,9 @@ public class MainActivity extends PreferenceActivity  {
                 int i=0;
                 for (BluetoothDevice device : adapter.getBondedDevices()) {
                     Log.d("BT",device.toString());
-                   entriesValues[i]=device.getAddress();
-                   entries[i]=device.getName();
-                   i++;
+                    entriesValues[i]=device.getAddress();
+                    entries[i]=device.getName();
+                    i++;
                 }
             }
 
@@ -208,12 +255,12 @@ public class MainActivity extends PreferenceActivity  {
             }
             ms.setEntries(entries);
             ms.setEntryValues(entriesValues);
-
         }
 
         @Override
         public void onResume(){
             super.onResume();
+            
             SwitchPreference headunitserver=(SwitchPreference) findPreference("startserver");
             RootBeer rootBeer = new RootBeer(getActivity());
             if (!rootBeer.isRootedWithoutBusyBoxCheck())

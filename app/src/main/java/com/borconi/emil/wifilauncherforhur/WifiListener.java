@@ -1,44 +1,62 @@
 package com.borconi.emil.wifilauncherforhur;
 
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
+import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
+
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.net.wifi.ScanResult;
+import android.net.ConnectivityManager;
+import android.net.MacAddress;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Build;
-import android.os.Handler;
-import android.os.Looper;
-import android.preference.PreferenceManager;
+
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.preference.PreferenceManager;
 
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.List;
+import java.util.UUID;
 
-import uk.co.emil.borconi.wifip2pforhur.Wifip2pService;
 import uk.co.emil.borconi.wifip2pforhur.HeadunitServerToggle;
+import uk.co.emil.borconi.wifip2pforhur.Wifip2pService;
+
 import static android.app.Notification.EXTRA_NOTIFICATION_ID;
 import static uk.co.emil.borconi.wifip2pforhur.MyTether.startTether;
 
 public class WifiListener extends Wifip2pService {
 
 
+
     private WifiReceiver mylistener=new WifiReceiver();
-    private boolean isRunning=true;
+
+    private ConnectivityManager.NetworkCallback callback;
+    private NetworkRequest networkRequest;
+    static public boolean isConnected=false;
+    private ConnectivityManager.NetworkCallback networkCallback;
 
 
     @Override
     public void onCreate(){
         super.onCreate();
         netId=-1;
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("android.app.action.EXIT_CAR_MODE");
+        registerReceiver(mylistener, intentFilter);
+
         Intent snoozeIntent = new Intent(this, WifiReceiver.class);
         snoozeIntent.setAction("com.borconi.emil.wifilauncherforhur.exit");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -102,6 +120,46 @@ public class WifiListener extends Wifip2pService {
                 connectToHur(wifi.getDhcpInfo().gateway);
 
         }
+
+
+       /* if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q && !sp.getBoolean("wifidirect",false)) {
+            WifiNetworkSpecifier.Builder builder = new WifiNetworkSpecifier.Builder();
+            builder.setSsid("HUR");
+           // builder.setBssid(MacAddress.fromString("02:08:22:fa:a5:23"));
+            //builder.setBssid(MacAddress.fromString("00:08:22:b6:0c:3d"));
+            builder.setWpa2Passphrase("AndroidAutoConnect");
+
+            WifiNetworkSpecifier wifiNetworkSpecifier = builder.build();
+            NetworkRequest.Builder networkRequestBuilder = new NetworkRequest.Builder();
+            networkRequestBuilder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_TRUSTED);
+
+            networkRequestBuilder.setNetworkSpecifier(wifiNetworkSpecifier);
+
+             networkRequest = networkRequestBuilder.build();
+             Log.d("WiFi_Launcher","Network request: "+networkRequest);
+            final ConnectivityManager cm = (ConnectivityManager) getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm != null) {
+                cm.requestNetwork(networkRequest, callback=new ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onAvailable(@NonNull Network network) {
+                        //Use this network object to Send request.
+                        //eg - Using OkHttp library to create a service request
+                        InetAddress server = cm.getLinkProperties(network).getDnsServers().get(0);
+                        Log.d("WiFi-Launcher","Got the following address: "+server.getHostAddress());
+                        connectToHur(server.getHostAddress());
+
+
+                        super.onAvailable(network);
+                    }
+                });
+
+            }
+        }*/
+
+
+
         else if (sp.getBoolean("wifidirect",false))
         {
             startP2P();
@@ -129,10 +187,29 @@ public class WifiListener extends Wifip2pService {
     }
 
     @Override
-    public void connectToHur(String address){
+    public void connectToHur(final String address){
+        Log.d("WiFi Listenner","Calling super connecto to HUR");
         super.connectToHur(address);
-        stopSelf();
-    }
+
+        isConnected=true;
+
+        final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkRequest.Builder builder = new NetworkRequest.Builder();
+        builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+        networkCallback=new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onLost(Network network) {
+                Log.d("Wifi Listener","Lost connection to HUR wifi, exiting the app");
+                connectivityManager.unregisterNetworkCallback(this);
+                stopSelf();
+            }
+        };
+        connectivityManager.registerNetworkCallback(
+                builder.build(),networkCallback
+        );
+
+}
 
     @Override
     public void startSlave(final WifiP2pInfo info, final WifiP2pGroup wifiP2pGroup){
@@ -185,82 +262,30 @@ public class WifiListener extends Wifip2pService {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction("android.app.action.EXIT_CAR_MODE");
-        registerReceiver(mylistener, intentFilter);
+    Log.d("WiFi-Launcher","Start service");
         return START_STICKY;
 
     }
     @Override
     public void onDestroy(){
         super.onDestroy();
-        isRunning=false;
-        try {
-            unregisterReceiver(mylistener);
-        }
-        catch (Exception e){}
+
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         if (sp.getBoolean("startserver",false) && Build.VERSION.SDK_INT < Build.VERSION_CODES.P)
             HeadunitServerToggle.StartStop(true);
         if (sp.getBoolean("tether",false) && Build.VERSION.SDK_INT < Build.VERSION_CODES.P)
             startTether(this,false);
-        if (sp.getBoolean("wifidirect",false))
-            try {
-                mManager.removeGroup(mChannel,null);
-                }
-            catch (Exception e){}
-        android.os.Process.killProcess(android.os.Process.myPid());
-    }
 
-
-    public class WifiReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.d("HU","REceiver: " + intent.getAction());
-            if (intent.getAction()==null)
-                return;
-            if (intent.getAction().equalsIgnoreCase("com.borconi.emil.wifilauncherforhur.exit"))
-            {
-                stopSelf();
-                return;
-            }
-           /* if (intent.getAction()==WifiManager.SCAN_RESULTS_AVAILABLE_ACTION) {
-                final WifiManager wifi = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-                Log.d("HU-Wifi","Got a scan result");
-                if (wifi.getConnectionInfo().getNetworkId()!=netId) {
-                    Log.d("HU-Wifi","We are not connected to HUR wifi....");
-                    List<ScanResult> results = wifi.getScanResults();
-                    for (ScanResult a:results)
-                    {
-                        if (a.SSID.startsWith("\"") && a.SSID.endsWith("\""))
-                            a.SSID = a.SSID.substring(1, a.SSID.length() - 1);
-                        if (a.SSID.equalsIgnoreCase("HUR"))
-                        {
-                            Log.d("HU-Wifi","Found HUR Wifi in the list");
-                            wifi.disconnect();
-                            wifi.enableNetwork(netId, true);
-                            wifi.reconnect();
-                            return;
-                        }
-                    }
-                    Log.d("HU-Wifi","HUR wifi not in the list, setting up a 30 sec scan delay");
-                    new Handler().postDelayed(new Runnable() {
-                                                  @Override
-                                                  public void run() {
-                                                      Log.d("HU-Wifi","Requesting scan");
-                                                      wifi.startScan();
-                                                  }
-                                              },30000); //Pie is throlling one scan to 30 seconds.
-                }
-            }*/
-            if (intent.getAction().equalsIgnoreCase("android.app.action.EXIT_CAR_MODE"))
-            {
-                stopSelf();
-                return;
-            }
+        if (networkCallback!=null)
+        {
+            ConnectivityManager connectivityManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+            connectivityManager.unregisterNetworkCallback(networkCallback);
         }
+        //android.os.Process.killProcess(android.os.Process.myPid());
     }
+
+
+
 
 
 
