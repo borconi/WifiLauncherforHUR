@@ -15,4 +15,9 @@
     <string name="need_draw_over_other_apps">Starting with Android 10, background services are restricted to start apps/activities on users screen, meaning it won\'t be able to launch Android Auto without this permission.</string>
     <string name="stopbt">Exit on BT</string>
     <string name="stopbt_desc">Exit car mode and stop Wifi Launcher when BT disconnects (some cars constantly drops BT connection meaning app can randomly quit) in which case you should disable this option.</string>
+    <string name="app_usage">Connect to</string>
+    <string name="perm_req">Bond to notification service</string>
+    <string name="perm_desc">Allow app to bond to system service for better decetion of Wifi/BT devices. No notification data will ever be accessed or used. This is not a mandatory requirement, but it will allow you to restart Wireless AA with a press of a button on the car screen.\nAlso this will allow to start projection automatically whne connected to a wifi caled HUR without the need of specifying any BT device.</string>
+    <string name="notnow">Not now</string>
+    <string name="ignore">Never ask again</string>
 </resources>
