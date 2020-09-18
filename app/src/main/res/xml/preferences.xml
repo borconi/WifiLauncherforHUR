@@ -37,28 +37,5 @@
     android:title="@string/stopbt"
     android:summary="@string/stopbt_desc" />
 -->
-<SwitchPreference
-    app:iconSpaceReserved="false"
-    android:enabled="true"
-    android:key="tether"
-    android:persistent="true"
-    android:title="@string/starttether" />
-<!--
-    <SwitchPreference
-    app:iconSpaceReserved="false"
-    android:enabled="true"
-    android:key="wifidirect"
-    android:persistent="true"
-    android:title="@string/wifiDirect" />
--->
-    <SwitchPreference
-    app:iconSpaceReserved="false"
-    android:enabled="true"
-    android:key="startserver"
-    android:persistent="true"
-    android:title="@string/startserver"
-    android:summary="@string/reqroot" />
-
-
 
 </PreferenceScreen>

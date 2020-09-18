@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">Wifi Launcher</string>
-    <string name="chosedevice">Select your car\'s BT</string>
-    <string name="starttether">Start tethering</string>
     <string name="macTitile">BT Adapters</string>
     <string name="macDesc">Select on which BT device to start the app.</string>
     <string name="settings">Settings</string>
@@ -11,8 +9,11 @@
     <string name="startserver">Start Headunit Server</string>
     <string name="reqroot">This requires root access</string>
     <string name="permission_denied_loc">Without location permissions app won\'t be able to access Wifi network names which is crucial part for automation.</string>
-    <string name="permission_denied">Error</string>
+    <string name="permission_denied">Permissions needed</string>
     <string name="need_draw_over_other_apps">Starting with Android 10, background services are restricted to start apps/activities on users screen, meaning it won\'t be able to launch Android Auto without this permission.</string>
+    <string name="need_background_location">Starting with Android 10, location needs to be allowed all the time in order to connect Android Auto Wireless</string>
+    <string name="wifi_off_title">Wifi is off</string>
+    <string name="wifi_off_description">Please turn on Wifi to start Android Auto Wireless</string>
     <string name="stopbt">Exit on BT</string>
     <string name="stopbt_desc">Exit car mode and stop Wifi Launcher when BT disconnects (some cars constantly drops BT connection meaning app can randomly quit) in which case you should disable this option.</string>
     <string name="app_usage">Connect to</string>
