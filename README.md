@@ -47,4 +47,8 @@ In Android 9 this app will turn on Wi-Fi automatically.
 
 We need to grant permissions to add suggested Wi-Fis to autoconnect to HUR Wi-Fi automatically, otherwise you have to connect manually in order to save that network in your phone.
 
+#### Notifications Access
+
+We don't need notification access in order to get Wi-Fi or Bluetooth State, so we removed it from this app.
+
 ## Collaborators
