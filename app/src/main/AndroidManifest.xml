@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.borconi.emil.wifilauncherforhur">
 
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -10,10 +11,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.MAINLINE_NETWORK_STACK" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -21,39 +23,34 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity">
+        <activity
+            android:name=".activities.MainActivity"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <receiver android:name=".BTReceiver">
+
+        <receiver android:name=".receivers.BTReceiver">
             <intent-filter>
                 <action android:name="test.android.bluetooth.device.action.ACL_CONNECTED" />
                 <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
-                <action android:name="android.bluetooth.device.action.NAME_CHANGED"/>
+                <action android:name="android.bluetooth.device.action.NAME_CHANGED" />
                 <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
             </intent-filter>
-
-        </receiver>
-        <service android:name=".WifiListener"></service>
-
-        <receiver android:name=".WifiReceiver">
-            <intent-filter>
-                <action android:name="com.borconi.emil.wifilauncherforhur.exit"/>
-                <action android:name="android.app.action.EXIT_CAR_MODE"/>
-            </intent-filter>
         </receiver>
 
-        <service android:name=".CarnotificationListener" android:exported="false"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+        <service android:name=".listeners.WifiListener" />
+
+        <receiver android:name=".receivers.WifiReceiver">
             <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-
+                <action android:name="com.borconi.emil.wifilauncherforhur.exit" />
+                <action android:name="android.app.action.EXIT_CAR_MODE" />
             </intent-filter>
-        </service>
-
+        </receiver>
     </application>
 
 </manifest>
