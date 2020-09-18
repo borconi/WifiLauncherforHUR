@@ -84,7 +84,7 @@ public class BTReceiver extends BroadcastReceiver {
                         public void run() {
                             while (wifiManager.getConnectionInfo().getIpAddress() == 0) {
                                 try {
-                                    Thread.sleep(1000L);
+                                    Thread.sleep(500L);
                                 } catch (InterruptedException var2) {
                                     var2.printStackTrace();
                                 }
@@ -106,7 +106,6 @@ public class BTReceiver extends BroadcastReceiver {
         }
     }
 
-
     public static void connectToHur(Context context) {
         WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         if (WifiListener.isConnected)
@@ -120,4 +119,6 @@ public class BTReceiver extends BroadcastReceiver {
         context.getApplicationContext().startActivity(i);
         WifiListener.isConnected = true;
     }
+
+
 }

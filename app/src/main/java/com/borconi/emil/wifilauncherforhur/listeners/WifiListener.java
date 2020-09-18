@@ -54,9 +54,7 @@ public class WifiListener extends Wifip2pService {
 
         Intent snoozeIntent = new Intent(this, WifiReceiver.class);
         snoozeIntent.setAction("com.borconi.emil.wifilauncherforhur.exit");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            snoozeIntent.putExtra(EXTRA_NOTIFICATION_ID, 0);
-        }
+        snoozeIntent.putExtra(EXTRA_NOTIFICATION_ID, 0);
         PendingIntent snoozePendingIntent =
                 PendingIntent.getBroadcast(this, 0, snoozeIntent, 0);
 
@@ -200,21 +198,12 @@ public class WifiListener extends Wifip2pService {
     public void onDestroy() {
         super.onDestroy();
 
+        isConnected = false;
+        unregisterReceiver(mylistener);
+
         if (networkCallback != null) {
             ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
             connectivityManager.unregisterNetworkCallback(networkCallback);
         }
-        //android.os.Process.killProcess(android.os.Process.myPid());
     }
-
-    @Override
-    public void onTaskRemoved(Intent rootIntent) {
-        //create a intent that you want to start again..
-        Intent intent = new Intent(getApplicationContext(), WifiListener.class);
-        PendingIntent pendingIntent = PendingIntent.getService(this, 1, intent, PendingIntent.FLAG_ONE_SHOT);
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        alarmManager.set(AlarmManager.RTC_WAKEUP, SystemClock.elapsedRealtime() + 5000, pendingIntent);
-        super.onTaskRemoved(rootIntent);
-    }
-
 }
