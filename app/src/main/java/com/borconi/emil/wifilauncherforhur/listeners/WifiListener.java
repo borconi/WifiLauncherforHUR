@@ -1,6 +1,5 @@
 package com.borconi.emil.wifilauncherforhur.listeners;
 
-import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -16,7 +15,6 @@ import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.os.Build;
 
-import android.os.SystemClock;
 import android.util.Log;
 
 import com.borconi.emil.wifilauncherforhur.R;
@@ -37,8 +35,6 @@ public class WifiListener extends Wifip2pService {
 
     private WifiReceiver mylistener = new WifiReceiver();
 
-    private ConnectivityManager.NetworkCallback callback;
-    private NetworkRequest networkRequest;
     static public boolean isConnected = false;
     static public boolean askingForWiFi = false;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -137,6 +133,7 @@ public class WifiListener extends Wifip2pService {
                 @Override
                 public void onLost(Network network) {
                     Log.d("Wifi Listener", "Lost connection to HUR wifi, exiting the app");
+                    WifiListener.isConnected = false;
                     connectivityManager.unregisterNetworkCallback(this);
                     stopSelf();
                 }
@@ -198,7 +195,6 @@ public class WifiListener extends Wifip2pService {
     public void onDestroy() {
         super.onDestroy();
 
-        isConnected = false;
         unregisterReceiver(mylistener);
 
         if (networkCallback != null) {

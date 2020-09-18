@@ -74,7 +74,7 @@ public class BTReceiver extends BroadcastReceiver {
         }
 
         if ("android.net.wifi.STATE_CHANGE".equals(intent.getAction())) {
-            NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+            NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
             if (NetworkInfo.State.CONNECTED.equals(networkInfo.getState())) {
                 final WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                 assert wifiManager != null;
