@@ -101,7 +101,6 @@ public class WifiListener extends Wifip2pService {
             wifiConfig.SSID = String.format("\"%s\"", "HUR");
             wifiConfig.preSharedKey = String.format("\"%s\"", "AndroidAutoConnect");
             netId = wifi.addNetwork(wifiConfig);
-            //wifi.startScan();
         }
         BTReceiver.netid = netId;
         if (wifi.getConnectionInfo().getNetworkId() != netId) {
@@ -183,7 +182,6 @@ public class WifiListener extends Wifip2pService {
             }
         }).start();
     }
-
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {

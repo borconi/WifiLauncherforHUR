@@ -2,12 +2,14 @@ package com.borconi.emil.wifilauncherforhur.activities;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 
+import android.net.wifi.WifiManager;
+import android.net.wifi.WifiNetworkSuggestion;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -15,16 +17,13 @@ import android.os.Bundle;
 import android.provider.Settings;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
-import androidx.preference.PreferenceManager;
 
 import com.borconi.emil.wifilauncherforhur.R;
 import com.borconi.emil.wifilauncherforhur.listeners.WifiListener;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.IntStream;
 
 public class MainActivity extends AppCompatActivity {
@@ -58,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
                     dialog.dismiss();
                 }
             });
+            builder.setOnCancelListener(dialog -> WifiListener.askingForWiFi = false);
             AlertDialog alertDialog = builder.create();
             alertDialog.show();
         }
@@ -67,49 +67,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume(){
         super.onResume();
 
-        Set<String> enabledapps = NotificationManagerCompat.getEnabledListenerPackages(this);
-        final SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-
-//        boolean havepermission = false;
-//        for (String currapp : enabledapps) {
-//            if (currapp.equalsIgnoreCase("com.borconi.emil.wifilauncherforhur"))
-//                havepermission = true;
-//        }
-
-//        if (!havepermission && !sp.getBoolean("ignore_notification",false)) {
-//            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-//            builder.setTitle(getResources().getString(R.string.perm_req));
-//            builder.setMessage(getResources().getString(R.string.perm_desc));
-//            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//                public void onClick(DialogInterface dialog, int id) {
-//                    startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
-//                }
-//            });
-//            builder.setNegativeButton(getString(R.string.notnow), new DialogInterface.OnClickListener() {
-//                public void onClick(DialogInterface dialog, int id) {
-//                    checkOverlays();
-//                    dialog.dismiss();
-//                }
-//            });
-//            builder.setNeutralButton(getString(R.string.ignore),new DialogInterface.OnClickListener() {
-//                public void onClick(DialogInterface dialog, int id) {
-//                    sp.edit().putBoolean("ignore_notification",true).commit();
-//                    dialog.dismiss();
-//                }
-//            });
-//            builder.setOnCancelListener(dialog -> {
-//                dialog.dismiss();
-//                checkOverlays();
-//            });
-//            AlertDialog notification_dialog = builder.show();
-//            return;
-//        }
-
         if (checkOverlays()) {
+            return;
+        }
+
+        if (checkPermissions()) {
             return;
         };
 
-        checkPermissions();
+        enableWifiSuggestions();
     }
 
     protected boolean checkOverlays() {
@@ -132,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
-    protected void checkPermissions() {
+    protected boolean checkPermissions() {
         boolean hasAccessFineLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
 
         List<String> permissions = new ArrayList<String>() {{
@@ -144,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (!hasAccessFineLocationPermission && !requestedAccessFineLocation) {
             ActivityCompat.requestPermissions(this, permissions.toArray(new String[0]), ACCESS_FINE_LOCATION_REQUEST_CODE);
-            return;
+            return true;
         }
 
         // Incremental location permission due to Android 11 best practice enforcement https://developer.android.com/training/location/permissions
@@ -162,8 +128,31 @@ public class MainActivity extends AppCompatActivity {
                         ActivityCompat.requestPermissions(activity, new String[] { Manifest.permission.ACCESS_BACKGROUND_LOCATION }, ACCESS_BACKGROUND_LOCATION_REQUEST_CODE);
                     }
                 });
+                builder.setOnCancelListener(dialog -> {
+                    currentPermissionDialog = null;
+                    checkPermissions();
+                });
                 currentPermissionDialog = builder.show();
+                return true;
             }
+        }
+        return false;
+    }
+
+    protected void enableWifiSuggestions() {
+        // addNetwork starting Android 10 is deprecated instead we need to use addNetworkSuggestions in order to connect to desired WiFi
+        // https://developer.android.com/reference/android/net/wifi/WifiManager#addNetwork(android.net.wifi.WifiConfiguration)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            WifiNetworkSuggestion wifiNetworkSuggestion = new WifiNetworkSuggestion
+                    .Builder()
+                    .setSsid("HUR")
+                    .setWpa2Passphrase("AndroidAutoConnect")
+                    .setIsAppInteractionRequired(true)
+                    .build();
+            ArrayList<WifiNetworkSuggestion> wifiSuggestionsList = new ArrayList<>();
+            wifiSuggestionsList.add(wifiNetworkSuggestion);
+            wifiManager.addNetworkSuggestions(wifiSuggestionsList);
         }
     }
 
@@ -198,6 +187,10 @@ public class MainActivity extends AppCompatActivity {
                                 checkPermissions();
                                 dialog.dismiss();
                             }
+                        });
+                        builder.setOnCancelListener(dialog -> {
+                            currentPermissionDialog = null;
+                            checkPermissions();
                         });
                         currentPermissionDialog = builder.show();
                     } else {

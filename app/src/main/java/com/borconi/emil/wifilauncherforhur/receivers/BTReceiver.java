@@ -63,7 +63,8 @@ public class BTReceiver extends BroadcastReceiver {
             uiModeManager.disableCarMode(UiModeManager.DISABLE_CAR_MODE_GO_HOME);
             WifiListener.isConnected = false;
 
-            // Disconnect was deprecated in Android 11. https://issuetracker.google.com/issues/128554616
+            // Disconnect was deprecated in Android 10. https://issuetracker.google.com/issues/128554616
+            // https://developer.android.com/reference/android/net/wifi/WifiManager#disconnect()
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                 WifiManager wifi = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                 assert wifi != null;
@@ -119,6 +120,4 @@ public class BTReceiver extends BroadcastReceiver {
         context.getApplicationContext().startActivity(i);
         WifiListener.isConnected = true;
     }
-
-
 }
