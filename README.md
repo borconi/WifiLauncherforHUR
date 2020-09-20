@@ -1,4 +1,4 @@
-# Wifi Launcher for Headunit Realoaded or AAGateWay
+# Wi-Fi Launcher for Headunit Reloaded or AAGateWay
 
 This app is a companion app which should be installed on the phone and it will facilitate the start of Android Auto in wireless mode for those users who use Headunit Reloaded or AAGateWay.
 
@@ -45,7 +45,7 @@ In Android 9 this app will turn on Wi-Fi automatically.
 
 #### Wi-Fi Suggestions (Android 10 and up)
 
-We need to grant permissions to add suggested Wi-Fis to autoconnect to HUR Wi-Fi automatically, otherwise you have to connect manually in order to save that network in your phone.
+We need to grant permissions to add suggested Wi-Fis to auto connect to HUR Wi-Fi automatically, otherwise you have to connect manually in order to save that network in your phone.
 
 #### Notifications Access
 

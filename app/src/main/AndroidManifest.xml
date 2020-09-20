@@ -1,32 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.borconi.emil.wifilauncherforhur">
+    package="com.borconi.emil.wifilauncherforhur"
+    xmlns:dist="http://schemas.android.com/apk/distribution">
+
+    <dist:module dist:instant="true" />
 
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <uses-permission android:name="android.permission.MAINLINE_NETWORK_STACK" />
 
     <application
-        android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:fullBackupContent="true"
+        android:allowBackup="true">
+
         <activity
             android:name=".activities.MainActivity"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true">
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -34,21 +35,31 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name=".receivers.BTReceiver">
+        <activity
+            android:name=".activities.EnableWifiActivity"
+            android:screenOrientation="sensorPortrait"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:noHistory="true"/>
+
+        <receiver
+            android:name=".receivers.BluetoothReceiver"
+            android:permission="android.permission.BLUETOOTH">
             <intent-filter>
-                <action android:name="test.android.bluetooth.device.action.ACL_CONNECTED" />
                 <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
-                <action android:name="android.bluetooth.device.action.NAME_CHANGED" />
                 <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
+                <action android:name="android.bluetooth.device.action.NAME_CHANGED" />
             </intent-filter>
         </receiver>
 
-        <service android:name=".listeners.WifiListener" />
+        <service android:name=".services.WifiService" />
 
-        <receiver android:name=".receivers.WifiReceiver">
+        <receiver
+            android:name=".receivers.WifiReceiver"
+            android:exported="false">
             <intent-filter>
-                <action android:name="com.borconi.emil.wifilauncherforhur.exit" />
-                <action android:name="android.app.action.EXIT_CAR_MODE" />
+                <action android:name="com.borconi.emil.wifilauncherforhur.action.EXIT" />
+                <action android:name="com.borconi.emil.wifilauncherforhur.action.FORCE_CONNECT" />
             </intent-filter>
         </receiver>
     </application>

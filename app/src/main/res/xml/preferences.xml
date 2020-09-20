@@ -1,41 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:tools="http://schemas.android.com/tools"
+<PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory
         app:iconSpaceReserved="false"
-        android:title="@string/settings"
-        android:key="prefgroup"/>
+        android:title="@string/status"
+        android:key="status_category">
 
-    <MultiSelectListPreference
+<!--        <Preference-->
+<!--            app:iconSpaceReserved="true"-->
+<!--            android:enabled="true"-->
+<!--            android:key="permissions_status"-->
+<!--            android:persistent="false"-->
+<!--            />-->
+
+        <Preference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="service_status"
+            android:persistent="false"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         app:iconSpaceReserved="false"
-    android:enabled="true"
-    android:key="mac"
-    android:persistent="true"
-    android:summary="@string/macTitile"
-    android:title="@string/macDesc" />
+        android:title="@string/bluetooth"
+        android:key="bluetooth_category">
 
-    <!--
-    <ListPreference
+        <MultiSelectListPreference
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false"
+            android:enabled="true"
+            android:key="mac"
+            android:persistent="true"
+            android:summary="@string/settings_bluetooth_selected_bluetooth_devices_description"
+            android:title="@string/settings_bluetooth_selected_bluetooth_devices_title" />
+
+        <SwitchPreference
+            app:iconSpaceReserved="false"
+            android:enabled="true"
+            android:key="stopServiceIfBluetoothDisconnects"
+            android:persistent="true"
+            android:title="@string/settings_bluetooth_stop_service_bluetooth_disconnection_title"
+            android:summary="@string/settings_bluetooth_stop_service_bluetooth_disconnection_description" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         app:iconSpaceReserved="false"
-        android:title="@string/app_usage"
-        android:enabled="true"
-        android:key="connectto"
-        android:persistent="true"
-        android:entries="@array/entries"
-        android:entryValues="@array/entries"
-        android:defaultValue="Headunit Reloaded"
-        app:useSimpleSummaryProvider="true"/>
+        android:title="@string/wireless"
+        android:key="wireless_category">
+
+        <EditTextPreference
+            app:iconSpaceReserved="false"
+            android:enabled="true"
+            android:key="headunitWifiSsid"
+            android:persistent="true"
+            android:defaultValue="@string/headunitWifiSsid_default_value"
+            android:title="@string/settings_wireless_headunit_ssid_title"
+            app:useSimpleSummaryProvider="true"/>
+
+        <EditTextPreference
+            app:iconSpaceReserved="false"
+            android:enabled="true"
+            android:key="headunitWifiWpa2Passphrase"
+            android:persistent="true"
+            android:defaultValue="@string/headunitWifiWpa2Passphrase_default_value"
+            android:title="@string/settings_wireless_headunit_wpa2_passphrase_title"
+            app:useSimpleSummaryProvider="true"/>
 
 
-    <SwitchPreference
+        <Preference
+            app:iconSpaceReserved="false"
+            android:enabled="true"
+            android:key="settings_wireless_note"
+            android:persistent="false"
+            android:summary="@string/settings_wireless_note"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         app:iconSpaceReserved="false"
-    android:enabled="true"
-    android:key="stoponBT"
-    android:persistent="true"
-    android:title="@string/stopbt"
-    android:summary="@string/stopbt_desc" />
--->
+        android:title="@string/advanced_options"
+        android:key="advanced_options_category">
 
+        <SwitchPreference
+            app:iconSpaceReserved="false"
+            android:enabled="true"
+            android:key="enableForceConnectButton"
+            android:persistent="true"
+            android:title="@string/settings_advanced_options_enable_force_connect_button_title"
+            android:summary="@string/settings_advanced_options_enable_force_connect_button_description" />
+
+        <SwitchPreference
+            app:iconSpaceReserved="false"
+            android:enabled="true"
+            android:key="setConnectedStatusBasedOnWifiConnection"
+            android:persistent="true"
+            android:title="@string/settings_advanced_options_set_connected_status_based_wifi_title"
+            android:summary="@string/settings_advanced_options_set_connected_status_based_wifi_description" />
+
+    </PreferenceCategory>
 </PreferenceScreen>
