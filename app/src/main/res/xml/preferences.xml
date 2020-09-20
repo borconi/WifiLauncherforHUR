@@ -32,7 +32,7 @@
             app:iconSpaceReserved="false"
             app:singleLineTitle="false"
             android:enabled="true"
-            android:key="mac"
+            android:key="selected_bluetooth_devices"
             android:persistent="true"
             android:summary="@string/settings_bluetooth_selected_bluetooth_devices_description"
             android:title="@string/settings_bluetooth_selected_bluetooth_devices_title" />

@@ -32,7 +32,7 @@ public class BluetoothReceiver extends BroadcastReceiver {
         }
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        Set<String> selectedBluetoothMacs = sharedPreferences.getStringSet("mac", null);
+        Set<String> selectedBluetoothMacs = sharedPreferences.getStringSet("selected_bluetooth_devices", null);
         if (selectedBluetoothMacs == null)
             return;
 

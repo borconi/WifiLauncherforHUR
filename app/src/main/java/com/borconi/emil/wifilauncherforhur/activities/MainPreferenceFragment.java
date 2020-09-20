@@ -32,7 +32,7 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         LinearLayout v = (LinearLayout) super.onCreateView(inflater, container, savedInstanceState);
 
         PreferenceScreen preferenceScreen = getPreferenceScreen();
-        Preference bluetoothDevicesPreference = preferenceScreen.findPreference("mac");
+        Preference bluetoothDevicesPreference = preferenceScreen.findPreference("selected_bluetooth_devices");
 
         if (bluetoothDevicesPreference != null) {
             bluetoothDevicesPreference.setOnPreferenceChangeListener((preference, newValue) -> {
@@ -69,7 +69,7 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
         updateServiceStatusPreference();
 
-        MultiSelectListPreference bluetoothDevices = preferenceScreen.findPreference("mac");
+        MultiSelectListPreference bluetoothDevices = preferenceScreen.findPreference("selected_bluetooth_devices");
         setBluetoothDevicesSummary(bluetoothDevices);
         //Preference permissionsStatusPreference = preferenceScreen.findPreference("permissions_status");
     }
@@ -136,7 +136,7 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_OK) {
             PreferenceScreen preferenceScreen = getPreferenceScreen();
-            MultiSelectListPreference bluetoothDevices = preferenceScreen.findPreference("mac");
+            MultiSelectListPreference bluetoothDevices = preferenceScreen.findPreference("selected_bluetooth_devices");
             tryPopulateBluetoothDevices(bluetoothDevices);
         }
     }
