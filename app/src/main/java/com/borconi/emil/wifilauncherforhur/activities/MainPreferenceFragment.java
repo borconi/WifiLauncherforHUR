@@ -96,16 +96,16 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
     protected void tryPopulateBluetoothDevices(MultiSelectListPreference preference) {
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        if (!adapter.isEnabled()) {
+        if (adapter != null && !adapter.isEnabled()) {
             Intent intentOpenBluetoothSettings = new Intent();
             intentOpenBluetoothSettings.setAction(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(intentOpenBluetoothSettings, REQUEST_ENABLE_BT);
         }
-        String[] entries = new String[]{adapter.isEnabled()
+        String[] entries = new String[]{adapter != null && adapter.isEnabled()
                 ? getString(R.string.settings_bluetooth_selected_bluetooth_devices_no_devices)
                 : getString(R.string.settings_bluetooth_selected_bluetooth_devices_bt_off)};
         String[] entryValues = new String[]{""};
-        if (adapter.getBondedDevices().size() > 0) {
+        if (adapter != null && adapter.getBondedDevices().size() > 0) {
             entries = adapter.getBondedDevices().stream().map(BluetoothDevice::getName).toArray(String[]::new);
             entryValues = adapter.getBondedDevices().stream().map(BluetoothDevice::getAddress).toArray(String[]::new);
         }
@@ -116,7 +116,7 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
     protected void setBluetoothDevicesSummary(MultiSelectListPreference bluetoothDevices) {
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-        if (!adapter.isEnabled()) {
+        if (adapter == null || !adapter.isEnabled()) {
             bluetoothDevices.setSummary(R.string.settings_bluetooth_selected_bluetooth_devices_turn_on);
             return;
         }
