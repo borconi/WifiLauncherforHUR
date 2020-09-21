@@ -5,24 +5,33 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
-import com.borconi.emil.wifilauncherforhur.listeners.WifiListener;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import static com.borconi.emil.wifilauncherforhur.receivers.WifiLocalReceiver.ACTION_WIFI_LAUNCHER_EXIT;
+import static com.borconi.emil.wifilauncherforhur.receivers.WifiLocalReceiver.ACTION_WIFI_LAUNCHER_FORCE_CONNECT;
 
+/**
+ * BroadcastReceiver to handle our explicit intents from notification actions
+ */
 public class WifiReceiver extends BroadcastReceiver {
+
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d("HU","REceiver: " + intent.getAction());
 
+        // We need this ReBroadcaster to receive explicit intents and re send it using LocalBroadcastManager
+        // so our Dynamic BroadcastReceiver can receive it
         if (intent.getAction() == null)
             return;
 
         switch (intent.getAction()) {
-            case "com.borconi.emil.wifilauncherforhur.exit":
-            case "android.app.action.EXIT_CAR_MODE":
-                WifiListener.isConnected = false;
-                context.stopService(new Intent(context, WifiListener.class));
+            case ACTION_WIFI_LAUNCHER_FORCE_CONNECT:
+            case ACTION_WIFI_LAUNCHER_EXIT:
+                Log.d("WifiReceiverRebroadcast", "Re sending intent to LocalBroadcastReceivers");
+                LocalBroadcastManager manager = LocalBroadcastManager.getInstance(context);
+                Intent modifiedIntent = new Intent(intent);
+                modifiedIntent.setComponent(null);
+                manager.sendBroadcast(modifiedIntent);
                 break;
         }
-
     }
 }
