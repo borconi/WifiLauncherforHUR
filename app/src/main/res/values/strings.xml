@@ -6,7 +6,7 @@
     <string name="alert_need_background_location">Starting with Android 10, location needs to be set to "Allowed all the time" in order to connect Wireless Android Auto</string>
     <string name="alert_wifi_off_description">Please turn on Wi-Fi to start Wireless Android Auto</string>
     <string name="settings_bluetooth_stop_service_bluetooth_disconnection_title">Stop Service on Bluetooth disconnection</string>
-    <string name="settings_bluetooth_stop_service_bluetooth_disconnection_description">This will turn the service off that connects Wireless Android Auto if it loses bluetooth connection. Recommended for users that car\'s screen is not turning hotspot off after turning the car off.</string>
+    <string name="settings_bluetooth_stop_service_bluetooth_disconnection_description">This will turn the service off that connects Wireless Android Auto if it loses bluetooth connection. Recommended for users when car display is not turning hotspot off after turning the car off.</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_title">Select on which Bluetooth devices to start this app</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_description">No selected devices</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_turn_on">Please turn on bluetooth</string>
