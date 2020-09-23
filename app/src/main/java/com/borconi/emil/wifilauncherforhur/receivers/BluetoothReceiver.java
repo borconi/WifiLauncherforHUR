@@ -36,6 +36,8 @@ public class BluetoothReceiver extends BroadcastReceiver {
         if (selectedBluetoothMacs == null)
             return;
 
+        UiModeManager uiModeManager = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
+
         if (selectedBluetoothMacs.contains(device.getAddress())) {
             switch (intent.getAction()) {
                 case BluetoothDevice.ACTION_ACL_CONNECTED:
@@ -44,21 +46,20 @@ public class BluetoothReceiver extends BroadcastReceiver {
                     if (WifiService.isRunning() || WifiService.isConnected())
                         return;
 
-                    if (((UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR)
+                    if (uiModeManager != null && uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR)
                         return;
 
-                    Intent WifiListenerIntent = new Intent(context, WifiService.class);
-                    context.startForegroundService(WifiListenerIntent);
+                    Intent startWifiServiceIntent = new Intent(context, WifiService.class);
+                    context.startForegroundService(startWifiServiceIntent);
                     break;
                 case BluetoothDevice.ACTION_ACL_DISCONNECTED:
                     if (sharedPreferences.getBoolean("stopServiceIfBluetoothDisconnects", false)) {
                         if (WifiService.isRunning()) {
-                            Log.d("BT-RECEIVER", "We should exit the listener");
-                            Intent intent1 = new Intent(context, WifiService.class);
-                            context.stopService(intent1);
+                            Log.d("BT-RECEIVER", "We should exit wifi service");
+                            Intent stopWifiServiceIntent = new Intent(context, WifiService.class);
+                            context.stopService(stopWifiServiceIntent);
                         }
 
-                        UiModeManager uiModeManager = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
                         if (uiModeManager != null) {
                             uiModeManager.disableCarMode(UiModeManager.DISABLE_CAR_MODE_GO_HOME);
                         }
