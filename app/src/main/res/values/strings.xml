@@ -15,7 +15,7 @@
     <string name="settings_advanced_options_enable_force_connect_button_title">Enable Force Connect button</string>
     <string name="settings_advanced_options_enable_force_connect_button_description">Adds a button in service notification to force connection to car\'s screen (needs service restart)</string>
     <string name="settings_advanced_options_start_service_manually_title">Start Wi-Fi service manually</string>
-    <string name="settings_advanced_options_start_service_manually_description">This will start Wi-Fi service to start Wireless Android Auto.</string>
+    <string name="settings_advanced_options_start_service_manually_description">This will start Wi-Fi service to connect Wireless Android Auto.</string>
     <string name="settings_wireless_headunit_ssid_title">Car\'s screen Wi-Fi name</string>
     <string name="settings_wireless_headunit_wpa2_passphrase_title">Car\'s screen Wi-Fi password</string>
     <string name="settings_wireless_note">Note: Consider if car\'s screen is rooted it can reset hotspot settings to default (HUR/AndroidAutoConnect) every time it starts</string>

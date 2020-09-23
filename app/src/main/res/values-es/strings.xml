@@ -16,7 +16,7 @@
     <string name="settings_advanced_options_enable_force_connect_button_title">Habilitar botón Forzar Conexión</string>
     <string name="settings_advanced_options_enable_force_connect_button_description">Agrega un boton en la notification del servicio para forzar la conexión a la pantalla del auto (necesita reiniciar el servicio)</string>
     <string name="settings_advanced_options_start_service_manually_title">Iniciar servicio Wi-Fi manualmente</string>
-    <string name="settings_advanced_options_start_service_manually_description">Esto va a iniciar el servicio Wi-Fi que inicia Android Auto Inalámbrico.</string>
+    <string name="settings_advanced_options_start_service_manually_description">Inicia el servicio Wi-Fi que conecta Android Auto Inalámbrico.</string>
     <string name="settings_wireless_headunit_ssid_title">Nombre de la Wi-Fi de la pantalla del auto</string>
     <string name="settings_wireless_headunit_wpa2_passphrase_title">Contraseña de la Wi-Fi de la pantalla del auto</string>
     <string name="settings_wireless_note">Nota: Considere que si la pantalla del auto está rooteada puede restablecer la configuracion del hotspot (HUR/AndroidAutoConnect) cada vez que inicia</string>
