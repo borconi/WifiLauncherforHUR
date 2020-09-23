@@ -1,41 +1,110 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:tools="http://schemas.android.com/tools"
+<PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory
-        app:iconSpaceReserved="false"
-        android:title="@string/settings"
-        android:key="prefgroup"/>
+        app:iconSpaceReserved="true"
+        android:title="@string/status"
+        android:key="status_category">
 
-    <MultiSelectListPreference
-        app:iconSpaceReserved="false"
-    android:enabled="true"
-    android:key="mac"
-    android:persistent="true"
-    android:summary="@string/macTitile"
-    android:title="@string/macDesc" />
+<!--        <Preference-->
+<!--            app:iconSpaceReserved="true"-->
+<!--            android:enabled="true"-->
+<!--            android:key="permissions_status"-->
+<!--            android:persistent="false"-->
+<!--            />-->
 
-    <!--
-    <ListPreference
-        app:iconSpaceReserved="false"
-        android:title="@string/app_usage"
-        android:enabled="true"
-        android:key="connectto"
-        android:persistent="true"
-        android:entries="@array/entries"
-        android:entryValues="@array/entries"
-        android:defaultValue="Headunit Reloaded"
-        app:useSimpleSummaryProvider="true"/>
+        <Preference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="service_status"
+            android:persistent="false"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="true"
+        android:title="@string/bluetooth"
+        android:icon="@drawable/ic_bluetooth_24"
+        android:key="bluetooth_category">
+
+        <MultiSelectListPreference
+            app:iconSpaceReserved="true"
+            app:singleLineTitle="false"
+            android:enabled="true"
+            android:key="selected_bluetooth_devices"
+            android:persistent="true"
+            android:summary="@string/settings_bluetooth_selected_bluetooth_devices_description"
+            android:title="@string/settings_bluetooth_selected_bluetooth_devices_title" />
+
+        <SwitchPreference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="stopServiceIfBluetoothDisconnects"
+            android:persistent="true"
+            android:title="@string/settings_bluetooth_stop_service_bluetooth_disconnection_title"
+            android:summary="@string/settings_bluetooth_stop_service_bluetooth_disconnection_description" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="true"
+        android:title="@string/wireless"
+        android:icon="@drawable/ic_wifi_tethering_24"
+        android:key="wireless_category">
+
+        <EditTextPreference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="headunitWifiSsid"
+            android:persistent="true"
+            android:defaultValue="@string/headunitWifiSsid_default_value"
+            android:title="@string/settings_wireless_headunit_ssid_title"
+            app:useSimpleSummaryProvider="true"/>
+
+        <EditTextPreference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="headunitWifiWpa2Passphrase"
+            android:persistent="true"
+            android:defaultValue="@string/headunitWifiWpa2Passphrase_default_value"
+            android:title="@string/settings_wireless_headunit_wpa2_passphrase_title"
+            app:useSimpleSummaryProvider="true"/>
 
 
-    <SwitchPreference
-        app:iconSpaceReserved="false"
-    android:enabled="true"
-    android:key="stoponBT"
-    android:persistent="true"
-    android:title="@string/stopbt"
-    android:summary="@string/stopbt_desc" />
--->
+        <Preference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="settings_wireless_note"
+            android:persistent="false"
+            app:enabled="false"
+            android:summary="@string/settings_wireless_note"/>
 
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="true"
+        android:icon="@drawable/ic_settings_24"
+        android:title="@string/advanced_options"
+        android:key="advanced_options_category"
+        app:initialExpandedChildrenCount="0">
+
+        <SwitchPreference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="enableForceConnectButton"
+            android:persistent="true"
+            android:title="@string/settings_advanced_options_enable_force_connect_button_title"
+            android:summary="@string/settings_advanced_options_enable_force_connect_button_description" />
+
+        <Preference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="start_service_manually"
+            android:persistent="true"
+            android:title="@string/settings_advanced_options_start_service_manually_title"
+            android:summary="@string/settings_advanced_options_start_service_manually_description" />
+
+    </PreferenceCategory>
 </PreferenceScreen>

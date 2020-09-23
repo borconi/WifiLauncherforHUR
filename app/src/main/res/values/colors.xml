@@ -1,7 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#008577</color>
-    <color name="colorPrimaryDark">#00574B</color>
-    <color name="colorAccent">#D81B60</color>
-    <color name="white">#ffffff</color>
+    <!-- Colors from https://material.io/resources/color -->
+    <color name="white">@android:color/white</color>
+    <color name="black">@android:color/black</color>
+    <color name="grey_900">#212121</color>
+    <color name="orange_700">#f57c00</color>
+    <color name="orange_700_variant">#bb4d00</color>
+    <color name="teal_700">#00796b</color>
+    <color name="teal_700_variant">#004c40</color>
+    <color name="bordeaux_700">#d32f2f</color>
+    <color name="bordeaux_700_variant">#9a0007</color>
+    <color name="green">#2e7d32</color>
+    <color name="green_variant">#005005</color>
+    <color name="purple">#6a1b9a</color>
+    <color name="purple_variant">#38006b</color>
+    <color name="blue_500">#2196f3</color>
+    <color name="blue_500_variant">#0069c0</color>
 </resources>
