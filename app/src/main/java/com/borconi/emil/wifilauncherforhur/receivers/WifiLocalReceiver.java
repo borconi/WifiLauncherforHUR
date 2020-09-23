@@ -20,7 +20,7 @@ public class WifiLocalReceiver extends BroadcastReceiver {
     public static final String ACTION_WIFI_LAUNCHER_EXIT = "com.borconi.emil.wifilauncherforhur.action.EXIT";
     public static final String ACTION_WIFI_LAUNCHER_FORCE_CONNECT = "com.borconi.emil.wifilauncherforhur.action.FORCE_CONNECT";
 
-    WifiService wifiService;
+    final WifiService wifiService;
 
     public WifiLocalReceiver(WifiService wifiService) {
         this.wifiService = wifiService;

@@ -25,6 +25,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -57,16 +58,15 @@ public class WifiService extends Service {
     private static final String STRING_EMPTY = "";
     private static final String WIFI_STRING_FORMAT = "\"%s\"";
     public static boolean askingForWiFi = false;
-    private static List<WifiServiceStatusChangedListener> listeners = new ArrayList<>();
+    private static final List<WifiServiceStatusChangedListener> listeners = new ArrayList<>();
     private static boolean isRunning = false;
     private static boolean isConnected = false;
     private ConnectivityManager.NetworkCallback networkCallback;
     private CarModeReceiver carModeReceiver;
     private WifiLocalReceiver wifiLocalReceiver;
-    private Handler mHandler = new Handler();
+    private final Handler mHandler = new Handler();
     private String headunitWifiSsid;
     private String headunitWifiWpa2Passphrase;
-    private boolean setConnectedStatusBasedOnWifiConnection;
     private Integer networkId;
 
     @Override
@@ -243,7 +243,6 @@ public class WifiService extends Service {
 
         headunitWifiSsid = sharedPreferences.getString("headunitWifiSsid", getString(R.string.headunitWifiSsid_default_value));
         headunitWifiWpa2Passphrase = sharedPreferences.getString("headunitWifiWpa2Passphrase", getString(R.string.headunitWifiWpa2Passphrase_default_value));
-        setConnectedStatusBasedOnWifiConnection = sharedPreferences.getBoolean("setConnectedStatusBasedOnWifiConnection", false);
     }
 
     protected void registerOnSharedPreferenceChangeListener() {
@@ -254,8 +253,6 @@ public class WifiService extends Service {
                             headunitWifiSsid = prefs.getString(key, getString(R.string.headunitWifiSsid_default_value));
                         case "headunitWifiWpa2Passphrase":
                             headunitWifiWpa2Passphrase = prefs.getString(key, getString(R.string.headunitWifiWpa2Passphrase_default_value));
-                        case "setConnectedStatusBasedOnWifiConnection":
-                            setConnectedStatusBasedOnWifiConnection = prefs.getBoolean(key, false);
                     }
                 });
     }
@@ -293,12 +290,10 @@ public class WifiService extends Service {
         public void run() {
             Log.d("WifiService", "CHECKING IF IT'S CONNECTED");
 
-            if (setConnectedStatusBasedOnWifiConnection) {
-                if (((UiModeManager) getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR) {
-                    Log.d("WifiService", "ENTER CAR MODE ");
-                    setIsConnected(true);
-                    registerOnLostNetworkCallback();
-                }
+            if (((UiModeManager) getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR) {
+                Log.d("WifiService", "ENTER CAR MODE ");
+                setIsConnected(true);
+                registerOnLostNetworkCallback();
             }
 
             if (!isConnected) {
@@ -333,10 +328,10 @@ public class WifiService extends Service {
                 builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
                 networkCallback = new ConnectivityManager.NetworkCallback() {
                     @Override
-                    public void onLost(Network network) {
+                    public void onLost(@NonNull Network network) {
                         Log.d("Wifi Listener", "Lost connection to HUR wifi, exiting the app");
                         setIsConnected(false);
-                        connectivityManager.unregisterNetworkCallback(this);
+                        removeNetworkCallback();
                         stopSelf();
                     }
                 };
@@ -367,6 +362,12 @@ public class WifiService extends Service {
     public static void setIsConnected(boolean isConnected) {
         WifiService.isConnected = isConnected;
         listeners.forEach(l -> l.OnStatusChanged(isRunning, isConnected));
+    }
+
+    private void removeNetworkCallback() {
+        final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        connectivityManager.unregisterNetworkCallback(networkCallback);
+        networkCallback = null;
     }
 
     @Nullable
