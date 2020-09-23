@@ -111,7 +111,7 @@ public class WifiService extends Service {
         // If Wi-Fi is in connected state, we will send AAWireless intent to HUR.
         if (wifiManager.getConnectionInfo().getSupplicantState() == SupplicantState.COMPLETED) {
             removeAllCallBacks();
-            mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
+            mHandler.postDelayed(CheckIfIsConnectedRunnable, FIVE_SECONDS);
 
             String gatewayAddress = IpUtils.IntToIp(wifiManager.getDhcpInfo().gateway);
             HurConnection.connect(getApplicationContext(), gatewayAddress);
@@ -126,14 +126,16 @@ public class WifiService extends Service {
             // Since Android 10 we can't turn on/off wifi programmatically
             // https://developer.android.com/reference/android/net/wifi/WifiManager#setWifiEnabled(boolean)
             // follow this post if Google enables it again: https://issuetracker.google.com/issues/128554616
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !askingForWiFi) {
-                askingForWiFi = true;
-                // Let's send a message to the user to turn it on.
-                Intent enableWifiActivityIntent = new Intent(getApplicationContext(), EnableWifiActivity.class);
-                enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                startActivity(enableWifiActivityIntent);
-                mHandler.postDelayed(CheckIfIsConnectedRunnable, FIVE_SECONDS);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (!askingForWiFi) {
+                    askingForWiFi = true;
+                    // Let's send a message to the user to turn it on.
+                    Intent enableWifiActivityIntent = new Intent(getApplicationContext(), EnableWifiActivity.class);
+                    enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+                    startActivity(enableWifiActivityIntent);
+                    mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
+                }
                 return false;
             } else { // Android Pie can turn on Wi-Fi
                 wifiManager.setWifiEnabled(true);
@@ -264,6 +266,8 @@ public class WifiService extends Service {
 
     private final Runnable TryToConnectRunnable = () -> {
         Log.d("WifiService", "TRY TO CONNECT FROM RUNNABLE");
+        checkIfIsInCarMode();
+
         if (!isConnected) {
             tryToConnect();
         }
@@ -272,16 +276,12 @@ public class WifiService extends Service {
         public void run() {
             Log.d("WifiService", "CHECKING IF IT'S CONNECTED");
 
-            if (((UiModeManager) getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR) {
-                Log.d("WifiService", "ENTER CAR MODE ");
-                setIsConnected(true);
-            }
+            checkIfIsInCarMode();
 
             if (!isConnected) {
                 mHandler.removeCallbacks(TryToConnectRunnable);
-                mHandler.postDelayed(TryToConnectRunnable, EIGHT_SECONDS);
+                mHandler.postDelayed(TryToConnectRunnable, FIVE_SECONDS);
             } else {
-                registerOnLostNetworkCallback();
                 mHandler.removeCallbacks(CheckIfIsConnectedRunnable);
                 mHandler.removeCallbacks(TryToConnectRunnable);
             }
@@ -290,8 +290,9 @@ public class WifiService extends Service {
 
     private final Runnable StopServiceRunnable = new Runnable() {
         public void run() {
-            Log.d("WifiService", "STOP SERVICE");
+            Log.d("WifiService", "STOP SERVICE RUNNABLE CHECK");
             if (!isConnected) {
+                Log.d("WifiService", "STOPPING SERVICE BY TIME (2 min)");
                 stopSelf();
             } else {
                 mHandler.removeCallbacks(StopServiceRunnable);
@@ -304,6 +305,7 @@ public class WifiService extends Service {
      */
     private void registerOnLostNetworkCallback() {
         if (isConnected && networkCallback == null) {
+            Log.d("Wifi Service", "registering OnLostNetworkCallback");
             final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
             if (connectivityManager != null) {
                 NetworkRequest.Builder builder = new NetworkRequest.Builder();
@@ -321,6 +323,14 @@ public class WifiService extends Service {
                         builder.build(), networkCallback
                 );
             }
+        }
+    }
+
+    protected void checkIfIsInCarMode() {
+        if (((UiModeManager) getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR) {
+            Log.d("WifiService", "ENTER CAR MODE (detected on WifiService)");
+            setIsConnected(true);
+            registerOnLostNetworkCallback();
         }
     }
 
