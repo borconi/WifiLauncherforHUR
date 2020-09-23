@@ -257,24 +257,6 @@ public class WifiService extends Service {
                 });
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("WiFi-Launcher", "Start service");
-        return START_STICKY;
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        setIsRunning(false);
-
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(wifiLocalReceiver);
-        unregisterReceiver(carModeReceiver);
-
-        removeAllCallBacks();
-        mHandler.removeCallbacks(StopServiceRunnable);
-    }
-
     private void removeAllCallBacks() {
         mHandler.removeCallbacks(TryToConnectRunnable);
         mHandler.removeCallbacks(CheckIfIsConnectedRunnable);
@@ -293,13 +275,13 @@ public class WifiService extends Service {
             if (((UiModeManager) getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR) {
                 Log.d("WifiService", "ENTER CAR MODE ");
                 setIsConnected(true);
-                registerOnLostNetworkCallback();
             }
 
             if (!isConnected) {
                 mHandler.removeCallbacks(TryToConnectRunnable);
                 mHandler.postDelayed(TryToConnectRunnable, EIGHT_SECONDS);
             } else {
+                registerOnLostNetworkCallback();
                 mHandler.removeCallbacks(CheckIfIsConnectedRunnable);
                 mHandler.removeCallbacks(TryToConnectRunnable);
             }
@@ -329,7 +311,7 @@ public class WifiService extends Service {
                 networkCallback = new ConnectivityManager.NetworkCallback() {
                     @Override
                     public void onLost(@NonNull Network network) {
-                        Log.d("Wifi Listener", "Lost connection to HUR wifi, exiting the app");
+                        Log.d("Wifi Service", "Lost connection to HUR wifi, exiting the app");
                         setIsConnected(false);
                         removeNetworkCallback();
                         stopSelf();
@@ -340,6 +322,27 @@ public class WifiService extends Service {
                 );
             }
         }
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d("WiFi-Launcher", "Start service");
+        return START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        setIsRunning(false);
+
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(wifiLocalReceiver);
+        unregisterReceiver(carModeReceiver);
+        if (!isConnected()) {
+            removeNetworkCallback();
+        }
+
+        removeAllCallBacks();
+        mHandler.removeCallbacks(StopServiceRunnable);
     }
 
     public static void addStatusChangedListener(WifiServiceStatusChangedListener listener) {
@@ -365,6 +368,7 @@ public class WifiService extends Service {
     }
 
     private void removeNetworkCallback() {
+        Log.d("Wifi Service", "Removing Network callback");
         final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         connectivityManager.unregisterNetworkCallback(networkCallback);
         networkCallback = null;
