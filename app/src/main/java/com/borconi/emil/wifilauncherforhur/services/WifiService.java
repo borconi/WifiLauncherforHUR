@@ -337,9 +337,6 @@ public class WifiService extends Service {
 
         LocalBroadcastManager.getInstance(this).unregisterReceiver(wifiLocalReceiver);
         unregisterReceiver(carModeReceiver);
-        if (!isConnected()) {
-            removeNetworkCallback();
-        }
 
         removeAllCallBacks();
         mHandler.removeCallbacks(StopServiceRunnable);
@@ -368,10 +365,12 @@ public class WifiService extends Service {
     }
 
     private void removeNetworkCallback() {
-        Log.d("Wifi Service", "Removing Network callback");
-        final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        connectivityManager.unregisterNetworkCallback(networkCallback);
-        networkCallback = null;
+        if (networkCallback != null) {
+            Log.d("Wifi Service", "Removing Network callback");
+            final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            connectivityManager.unregisterNetworkCallback(networkCallback);
+            networkCallback = null;
+        }
     }
 
     @Nullable
