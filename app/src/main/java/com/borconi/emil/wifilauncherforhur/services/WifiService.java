@@ -25,6 +25,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -57,16 +58,15 @@ public class WifiService extends Service {
     private static final String STRING_EMPTY = "";
     private static final String WIFI_STRING_FORMAT = "\"%s\"";
     public static boolean askingForWiFi = false;
-    private static List<WifiServiceStatusChangedListener> listeners = new ArrayList<>();
+    private static final List<WifiServiceStatusChangedListener> listeners = new ArrayList<>();
     private static boolean isRunning = false;
     private static boolean isConnected = false;
     private ConnectivityManager.NetworkCallback networkCallback;
     private CarModeReceiver carModeReceiver;
     private WifiLocalReceiver wifiLocalReceiver;
-    private Handler mHandler = new Handler();
+    private final Handler mHandler = new Handler();
     private String headunitWifiSsid;
     private String headunitWifiWpa2Passphrase;
-    private boolean setConnectedStatusBasedOnWifiConnection;
     private Integer networkId;
 
     @Override
@@ -111,7 +111,7 @@ public class WifiService extends Service {
         // If Wi-Fi is in connected state, we will send AAWireless intent to HUR.
         if (wifiManager.getConnectionInfo().getSupplicantState() == SupplicantState.COMPLETED) {
             removeAllCallBacks();
-            mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
+            mHandler.postDelayed(CheckIfIsConnectedRunnable, FIVE_SECONDS);
 
             String gatewayAddress = IpUtils.IntToIp(wifiManager.getDhcpInfo().gateway);
             HurConnection.connect(getApplicationContext(), gatewayAddress);
@@ -126,14 +126,16 @@ public class WifiService extends Service {
             // Since Android 10 we can't turn on/off wifi programmatically
             // https://developer.android.com/reference/android/net/wifi/WifiManager#setWifiEnabled(boolean)
             // follow this post if Google enables it again: https://issuetracker.google.com/issues/128554616
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !askingForWiFi) {
-                askingForWiFi = true;
-                // Let's send a message to the user to turn it on.
-                Intent enableWifiActivityIntent = new Intent(getApplicationContext(), EnableWifiActivity.class);
-                enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                startActivity(enableWifiActivityIntent);
-                mHandler.postDelayed(CheckIfIsConnectedRunnable, FIVE_SECONDS);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (!askingForWiFi) {
+                    askingForWiFi = true;
+                    // Let's send a message to the user to turn it on.
+                    Intent enableWifiActivityIntent = new Intent(getApplicationContext(), EnableWifiActivity.class);
+                    enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+                    startActivity(enableWifiActivityIntent);
+                    mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
+                }
                 return false;
             } else { // Android Pie can turn on Wi-Fi
                 wifiManager.setWifiEnabled(true);
@@ -243,7 +245,6 @@ public class WifiService extends Service {
 
         headunitWifiSsid = sharedPreferences.getString("headunitWifiSsid", getString(R.string.headunitWifiSsid_default_value));
         headunitWifiWpa2Passphrase = sharedPreferences.getString("headunitWifiWpa2Passphrase", getString(R.string.headunitWifiWpa2Passphrase_default_value));
-        setConnectedStatusBasedOnWifiConnection = sharedPreferences.getBoolean("setConnectedStatusBasedOnWifiConnection", false);
     }
 
     protected void registerOnSharedPreferenceChangeListener() {
@@ -254,10 +255,83 @@ public class WifiService extends Service {
                             headunitWifiSsid = prefs.getString(key, getString(R.string.headunitWifiSsid_default_value));
                         case "headunitWifiWpa2Passphrase":
                             headunitWifiWpa2Passphrase = prefs.getString(key, getString(R.string.headunitWifiWpa2Passphrase_default_value));
-                        case "setConnectedStatusBasedOnWifiConnection":
-                            setConnectedStatusBasedOnWifiConnection = prefs.getBoolean(key, false);
                     }
                 });
+    }
+
+    private void removeAllCallBacks() {
+        mHandler.removeCallbacks(TryToConnectRunnable);
+        mHandler.removeCallbacks(CheckIfIsConnectedRunnable);
+    }
+
+    private final Runnable TryToConnectRunnable = () -> {
+        Log.d("WifiService", "TRY TO CONNECT FROM RUNNABLE");
+        checkIfIsInCarMode();
+
+        if (!isConnected) {
+            tryToConnect();
+        }
+    };
+    private final Runnable CheckIfIsConnectedRunnable = new Runnable() {
+        public void run() {
+            Log.d("WifiService", "CHECKING IF IT'S CONNECTED");
+
+            checkIfIsInCarMode();
+
+            if (!isConnected) {
+                mHandler.removeCallbacks(TryToConnectRunnable);
+                mHandler.postDelayed(TryToConnectRunnable, FIVE_SECONDS);
+            } else {
+                mHandler.removeCallbacks(CheckIfIsConnectedRunnable);
+                mHandler.removeCallbacks(TryToConnectRunnable);
+            }
+        }
+    };
+
+    private final Runnable StopServiceRunnable = new Runnable() {
+        public void run() {
+            Log.d("WifiService", "STOP SERVICE RUNNABLE CHECK");
+            if (!isConnected) {
+                Log.d("WifiService", "STOPPING SERVICE BY TIME (2 min)");
+                stopSelf();
+            } else {
+                mHandler.removeCallbacks(StopServiceRunnable);
+            }
+        }
+    };
+
+    /**
+     * Register onLostNetworkCallback if stopServiceLosesWifiConnection preference is turned on and if it's connected to HUR.
+     */
+    private void registerOnLostNetworkCallback() {
+        if (isConnected && networkCallback == null) {
+            Log.d("Wifi Service", "registering OnLostNetworkCallback");
+            final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connectivityManager != null) {
+                NetworkRequest.Builder builder = new NetworkRequest.Builder();
+                builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+                networkCallback = new ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onLost(@NonNull Network network) {
+                        Log.d("Wifi Service", "Lost connection to HUR wifi, exiting the app");
+                        setIsConnected(false);
+                        removeNetworkCallback();
+                        stopSelf();
+                    }
+                };
+                connectivityManager.registerNetworkCallback(
+                        builder.build(), networkCallback
+                );
+            }
+        }
+    }
+
+    protected void checkIfIsInCarMode() {
+        if (((UiModeManager) getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR) {
+            Log.d("WifiService", "ENTER CAR MODE (detected on WifiService)");
+            setIsConnected(true);
+            registerOnLostNetworkCallback();
+        }
     }
 
     @Override
@@ -276,75 +350,6 @@ public class WifiService extends Service {
 
         removeAllCallBacks();
         mHandler.removeCallbacks(StopServiceRunnable);
-    }
-
-    private void removeAllCallBacks() {
-        mHandler.removeCallbacks(TryToConnectRunnable);
-        mHandler.removeCallbacks(CheckIfIsConnectedRunnable);
-    }
-
-    private final Runnable TryToConnectRunnable = () -> {
-        Log.d("WifiService", "TRY TO CONNECT FROM RUNNABLE");
-        if (!isConnected) {
-            tryToConnect();
-        }
-    };
-    private final Runnable CheckIfIsConnectedRunnable = new Runnable() {
-        public void run() {
-            Log.d("WifiService", "CHECKING IF IT'S CONNECTED");
-
-            if (setConnectedStatusBasedOnWifiConnection) {
-                if (((UiModeManager) getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR) {
-                    Log.d("WifiService", "ENTER CAR MODE ");
-                    setIsConnected(true);
-                    registerOnLostNetworkCallback();
-                }
-            }
-
-            if (!isConnected) {
-                mHandler.removeCallbacks(TryToConnectRunnable);
-                mHandler.postDelayed(TryToConnectRunnable, EIGHT_SECONDS);
-            } else {
-                mHandler.removeCallbacks(CheckIfIsConnectedRunnable);
-                mHandler.removeCallbacks(TryToConnectRunnable);
-            }
-        }
-    };
-
-    private final Runnable StopServiceRunnable = new Runnable() {
-        public void run() {
-            Log.d("WifiService", "STOP SERVICE");
-            if (!isConnected) {
-                stopSelf();
-            } else {
-                mHandler.removeCallbacks(StopServiceRunnable);
-            }
-        }
-    };
-
-    /**
-     * Register onLostNetworkCallback if stopServiceLosesWifiConnection preference is turned on and if it's connected to HUR.
-     */
-    private void registerOnLostNetworkCallback() {
-        if (isConnected && networkCallback == null) {
-            final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (connectivityManager != null) {
-                NetworkRequest.Builder builder = new NetworkRequest.Builder();
-                builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
-                networkCallback = new ConnectivityManager.NetworkCallback() {
-                    @Override
-                    public void onLost(Network network) {
-                        Log.d("Wifi Listener", "Lost connection to HUR wifi, exiting the app");
-                        setIsConnected(false);
-                        connectivityManager.unregisterNetworkCallback(this);
-                        stopSelf();
-                    }
-                };
-                connectivityManager.registerNetworkCallback(
-                        builder.build(), networkCallback
-                );
-            }
-        }
     }
 
     public static void addStatusChangedListener(WifiServiceStatusChangedListener listener) {
@@ -367,6 +372,15 @@ public class WifiService extends Service {
     public static void setIsConnected(boolean isConnected) {
         WifiService.isConnected = isConnected;
         listeners.forEach(l -> l.OnStatusChanged(isRunning, isConnected));
+    }
+
+    private void removeNetworkCallback() {
+        if (networkCallback != null) {
+            Log.d("Wifi Service", "Removing Network callback");
+            final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            connectivityManager.unregisterNetworkCallback(networkCallback);
+            networkCallback = null;
+        }
     }
 
     @Nullable

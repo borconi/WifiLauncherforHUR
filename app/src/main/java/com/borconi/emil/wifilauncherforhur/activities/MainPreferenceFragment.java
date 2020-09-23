@@ -3,6 +3,7 @@ package com.borconi.emil.wifilauncherforhur.activities;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -53,11 +54,26 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
             // If it's not on screen this fragment will not be attached.
             if (getActivity() == null) {
                 return;
-            };
+            }
             getActivity().runOnUiThread(this::updateServiceStatusPreference);
         });
 
         tryPopulateBluetoothDevices((MultiSelectListPreference) bluetoothDevicesPreference);
+
+        Preference startServiceManuallyPreference = preferenceScreen.findPreference("start_service_manually");
+        if (startServiceManuallyPreference != null) {
+            startServiceManuallyPreference.setOnPreferenceClickListener(preference -> {
+                if (!WifiService.isRunning()) {
+                    WifiService.setIsConnected(false);
+                    Context context = getContext();
+                    Intent WifiListenerIntent = new Intent(context, WifiService.class);
+                    if (context != null) {
+                        context.startForegroundService(WifiListenerIntent);
+                    }
+                }
+                return true;
+            });
+        }
 
         return v;
     }
@@ -85,7 +101,7 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
                     serviceStatusPreference.setIcon(R.drawable.ic_green_done_24);
                 } else {
                     serviceStatusPreference.setTitle(getString(R.string.service_running_looking_hur));
-                    serviceStatusPreference.setIcon(R.drawable.ic_black_sync_24);
+                    serviceStatusPreference.setIcon(R.drawable.ic_sync_24);
                 }
             } else {
                 serviceStatusPreference.setTitle(getString(R.string.service_not_running));

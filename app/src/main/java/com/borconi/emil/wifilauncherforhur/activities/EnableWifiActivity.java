@@ -18,7 +18,6 @@ import com.borconi.emil.wifilauncherforhur.services.WifiService;
 public class EnableWifiActivity extends AppCompatActivity {
 
     public static final int ACTION_WIFI_PANEL_REQUEST_CODE = 240;
-    boolean pressedTurnOnButton = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,7 +32,6 @@ public class EnableWifiActivity extends AppCompatActivity {
     }
 
     public void onTurnOnButtonClick(View v) {
-        pressedTurnOnButton = true;
         startActivityForResult(new Intent(Settings.Panel.ACTION_WIFI), ACTION_WIFI_PANEL_REQUEST_CODE);
     }
 
@@ -50,8 +48,6 @@ public class EnableWifiActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (!pressedTurnOnButton) {
-            WifiService.askingForWiFi = false;
-        }
+        WifiService.askingForWiFi = false;
     }
 }

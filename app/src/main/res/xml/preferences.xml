@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory
-        app:iconSpaceReserved="false"
+        app:iconSpaceReserved="true"
         android:title="@string/status"
         android:key="status_category">
 
@@ -24,12 +24,13 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        app:iconSpaceReserved="false"
+        app:iconSpaceReserved="true"
         android:title="@string/bluetooth"
+        android:icon="@drawable/ic_bluetooth_24"
         android:key="bluetooth_category">
 
         <MultiSelectListPreference
-            app:iconSpaceReserved="false"
+            app:iconSpaceReserved="true"
             app:singleLineTitle="false"
             android:enabled="true"
             android:key="selected_bluetooth_devices"
@@ -38,7 +39,7 @@
             android:title="@string/settings_bluetooth_selected_bluetooth_devices_title" />
 
         <SwitchPreference
-            app:iconSpaceReserved="false"
+            app:iconSpaceReserved="true"
             android:enabled="true"
             android:key="stopServiceIfBluetoothDisconnects"
             android:persistent="true"
@@ -48,12 +49,13 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-        app:iconSpaceReserved="false"
+        app:iconSpaceReserved="true"
         android:title="@string/wireless"
+        android:icon="@drawable/ic_wifi_tethering_24"
         android:key="wireless_category">
 
         <EditTextPreference
-            app:iconSpaceReserved="false"
+            app:iconSpaceReserved="true"
             android:enabled="true"
             android:key="headunitWifiSsid"
             android:persistent="true"
@@ -62,7 +64,7 @@
             app:useSimpleSummaryProvider="true"/>
 
         <EditTextPreference
-            app:iconSpaceReserved="false"
+            app:iconSpaceReserved="true"
             android:enabled="true"
             android:key="headunitWifiWpa2Passphrase"
             android:persistent="true"
@@ -72,34 +74,37 @@
 
 
         <Preference
-            app:iconSpaceReserved="false"
+            app:iconSpaceReserved="true"
             android:enabled="true"
             android:key="settings_wireless_note"
             android:persistent="false"
+            app:enabled="false"
             android:summary="@string/settings_wireless_note"/>
 
     </PreferenceCategory>
 
     <PreferenceCategory
-        app:iconSpaceReserved="false"
+        app:iconSpaceReserved="true"
+        android:icon="@drawable/ic_settings_24"
         android:title="@string/advanced_options"
-        android:key="advanced_options_category">
+        android:key="advanced_options_category"
+        app:initialExpandedChildrenCount="0">
 
         <SwitchPreference
-            app:iconSpaceReserved="false"
+            app:iconSpaceReserved="true"
             android:enabled="true"
             android:key="enableForceConnectButton"
             android:persistent="true"
             android:title="@string/settings_advanced_options_enable_force_connect_button_title"
             android:summary="@string/settings_advanced_options_enable_force_connect_button_description" />
 
-        <SwitchPreference
-            app:iconSpaceReserved="false"
+        <Preference
+            app:iconSpaceReserved="true"
             android:enabled="true"
-            android:key="setConnectedStatusBasedOnWifiConnection"
+            android:key="start_service_manually"
             android:persistent="true"
-            android:title="@string/settings_advanced_options_set_connected_status_based_wifi_title"
-            android:summary="@string/settings_advanced_options_set_connected_status_based_wifi_description" />
+            android:title="@string/settings_advanced_options_start_service_manually_title"
+            android:summary="@string/settings_advanced_options_start_service_manually_description" />
 
     </PreferenceCategory>
 </PreferenceScreen>
