@@ -39,5 +39,5 @@
     <string name="turn_off">Apagar</string>
     <string name="force_connect">Forzar conexión</string>
     <string name="status_all_permissions_granted">Genial! Todos los permisos están otorgados</string>
-    <string name="status_denied_permissions">Oh no! Hay algunos permisos denegados, tocá acá para arreglarlo.</string>
+    <string name="status_denied_permissions">Oh no! Hay algunos permisos denegados, tocá acá para arreglarlo</string>
 </resources>

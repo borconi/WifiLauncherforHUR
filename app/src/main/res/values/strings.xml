@@ -37,6 +37,6 @@
     <string name="service_wifi_ticker">Headunit Reloaded Wi-Fi Service is running trying to connect Wireless Android Auto</string>
     <string name="turn_off">Turn off</string>
     <string name="force_connect">Force connect</string>
-    <string name="status_all_permissions_granted">Great! All permissions are granted.</string>
-    <string name="status_denied_permissions">Oh no! There are permissions denied, tap here to fix it.</string>
+    <string name="status_all_permissions_granted">Great! All permissions are granted</string>
+    <string name="status_denied_permissions">Oh no! There are permissions denied, tap here to fix it</string>
 </resources>
