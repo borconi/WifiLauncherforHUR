@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -32,6 +33,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 
 import com.borconi.emil.wifilauncherforhur.R;
+import com.borconi.emil.wifilauncherforhur.activities.EnableLocationActivity;
 import com.borconi.emil.wifilauncherforhur.activities.EnableWifiActivity;
 import com.borconi.emil.wifilauncherforhur.listeners.WifiServiceStatusChangedListener;
 import com.borconi.emil.wifilauncherforhur.receivers.CarModeReceiver;
@@ -57,13 +59,16 @@ public class WifiService extends Service {
     private static final int TWO_MINUTES = 60 * 1000 * 2;
     private static final String STRING_EMPTY = "";
     private static final String WIFI_STRING_FORMAT = "\"%s\"";
+    private static final int NOTIFICATION_ID = 1035;
     public static boolean askingForWiFi = false;
+    public static boolean askingForLocation = false;
     private static final List<WifiServiceStatusChangedListener> listeners = new ArrayList<>();
     private static boolean isRunning = false;
     private static boolean isConnected = false;
     private ConnectivityManager.NetworkCallback networkCallback;
     private CarModeReceiver carModeReceiver;
     private WifiLocalReceiver wifiLocalReceiver;
+    private NotificationChannel notificationChannel;
     private final Handler mHandler = new Handler();
     private String headunitWifiSsid;
     private String headunitWifiWpa2Passphrase;
@@ -79,8 +84,11 @@ public class WifiService extends Service {
 
         registerReceivers();
 
-        Notification notification = getNotification();
-        startForeground(1, notification);
+        createNotificationChannel();
+        Notification notification = getNotification(getString(R.string.service_wifi_looking_text), notificationChannel);
+        startForeground(NOTIFICATION_ID, notification);
+
+        registerOnStatusChangedListenerUpdateNotification();
 
         // Tries to connect to HUR for the first time
         tryToConnect();
@@ -92,7 +100,15 @@ public class WifiService extends Service {
     public void tryToConnect() {
         WifiManager wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
 
+        // If Wi-Fi is off we won't be able to connect to car display
         if (!verifyOrEnableWifi()) {
+            return;
+        }
+
+        // If Location Services are off we won't be able to look for desired Wi-Fi SSID.
+        // More info: https://developer.android.com/reference/android/net/wifi/WifiManager#getConnectionInfo()
+        // We will get "UNKNOWN_SSID" and no networkId at all.
+        if (!verifyOrEnableLocation()) {
             return;
         }
 
@@ -100,7 +116,7 @@ public class WifiService extends Service {
 
         // If connected Wi-Fi is diff than desired, we will disconnect and try to reconnect.
         if (wifiManager.getConnectionInfo().getNetworkId() != networkId) {
-            Log.d("HU-Wifi", "Start up, not connected to HUR network, is it in range?");
+            Log.d("WifiService", "Start up, not connected to HUR network, is it in range?");
 
             wifiManager.disconnect();
             wifiManager.enableNetwork(networkId, true);
@@ -109,13 +125,14 @@ public class WifiService extends Service {
         }
 
         // If Wi-Fi is in connected state, we will send AAWireless intent to HUR.
-        if (wifiManager.getConnectionInfo().getSupplicantState() == SupplicantState.COMPLETED) {
+        if (getCleanSsid(wifiManager.getConnectionInfo().getSSID()).equalsIgnoreCase(headunitWifiSsid) &&
+                wifiManager.getConnectionInfo().getSupplicantState() == SupplicantState.COMPLETED) {
             removeAllCallBacks();
             mHandler.postDelayed(CheckIfIsConnectedRunnable, FIVE_SECONDS);
 
             String gatewayAddress = IpUtils.IntToIp(wifiManager.getDhcpInfo().gateway);
             HurConnection.connect(getApplicationContext(), gatewayAddress);
-            Log.d("HurConnection", "Sending Intent to HUR! > gatewayAddress: " + gatewayAddress);
+            Log.d("WifiService", "Sending Intent to HUR! > gatewayAddress: " + gatewayAddress);
         }
     }
 
@@ -144,16 +161,32 @@ public class WifiService extends Service {
         return true;
     }
 
+    protected boolean verifyOrEnableLocation() {
+        LocationManager locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+
+        if (!locationManager.isLocationEnabled()) {
+            askingForLocation = true;
+            // Let's send a message to the user to turn it on.
+            Intent enableLocationActivityIntent = new Intent(getApplicationContext(), EnableLocationActivity.class);
+            enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+            startActivity(enableLocationActivityIntent);
+            mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
+            return false;
+        }
+        return true;
+    }
+
     protected void verifyOrAddHurHotspot() {
         if (networkId == null) {
             WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
 
             @SuppressLint("MissingPermission")
-            List<WifiConfiguration> currentWifis = wifiManager.getConfiguredNetworks();
+            List<WifiConfiguration> configuredWiFis = wifiManager.getConfiguredNetworks();
 
-            currentWifis.stream()
+            configuredWiFis.stream()
                     // Removes " from beginning and ending of string
-                    .filter(w -> w.SSID.replaceAll("^\"|\"$", STRING_EMPTY).equalsIgnoreCase(headunitWifiSsid))
+                    .filter(w -> getCleanSsid(w.SSID).equalsIgnoreCase(headunitWifiSsid))
                     .findFirst()
                     .ifPresent(w -> networkId = w.networkId);
 
@@ -169,7 +202,7 @@ public class WifiService extends Service {
                     wifiManager.addNetworkSuggestions(wifiSuggestionsList);
                 }
 
-                Log.d("HU-Wifi", "HUR wifi not in the list, add it and try to connect");
+                Log.d("WifiService", "HUR wifi not in the list, add it and try to connect");
                 WifiConfiguration wifiConfig = new WifiConfiguration();
                 wifiConfig.SSID = String.format(WIFI_STRING_FORMAT, headunitWifiSsid);
                 wifiConfig.preSharedKey = String.format(WIFI_STRING_FORMAT, headunitWifiWpa2Passphrase);
@@ -197,18 +230,24 @@ public class WifiService extends Service {
         LocalBroadcastManager.getInstance(this).registerReceiver(wifiLocalReceiver, intentFilterWifiReceiverLocal);
     }
 
-    protected Notification getNotification() {
-        NotificationManager mNotificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
-        NotificationChannel mChannel = new NotificationChannel("wifilauncher_notification", "Wi-Fi Launcher Service", NotificationManager.IMPORTANCE_DEFAULT);
-        mChannel.setDescription("Wi-Fi Launcher for HUR");
-        mChannel.setShowBadge(false);
-        mChannel.setLockscreenVisibility(VISIBILITY_PUBLIC);
-        mNotificationManager.createNotificationChannel(mChannel);
+    protected void createNotificationChannel() {
+        if (notificationChannel == null) {
+            NotificationManager mNotificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationChannel mChannel = new NotificationChannel("wifilauncher_notification_channel_no_sound", "Wi-Fi Launcher Service", NotificationManager.IMPORTANCE_DEFAULT);
+            mChannel.setDescription("Wi-Fi Launcher for HUR");
+            mChannel.setShowBadge(false);
+            mChannel.setSound(null, null);
+            mChannel.setLockscreenVisibility(VISIBILITY_PUBLIC);
+            mNotificationManager.createNotificationChannel(mChannel);
+            notificationChannel = mChannel;
+        }
+    }
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), mChannel.getId())
+    protected Notification getNotification(String contentText, NotificationChannel notificationChannel) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), notificationChannel.getId())
                 .setContentTitle(getString(R.string.service_wifi_title))
-                .setContentText(getString(R.string.service_wifi_text))
-                .setSmallIcon(R.drawable.aawifi)
+                .setContentText(contentText)
+                .setSmallIcon(R.drawable.ic_aa_wifi_notification)
                 .setTicker(getString(R.string.service_wifi_ticker));
 
         Intent turnOffIntent = new Intent(getApplicationContext(), WifiReceiver.class);
@@ -219,7 +258,7 @@ public class WifiService extends Service {
                 PendingIntent.getBroadcast(getApplicationContext(), 10, turnOffIntent, PendingIntent.FLAG_CANCEL_CURRENT);
 
         builder.addAction(
-                new NotificationCompat.Action.Builder(R.drawable.ic_exit_to_app_24px,
+                new NotificationCompat.Action.Builder(R.drawable.ic_power_settings_new_24,
                         getString(R.string.turn_off),
                         turnOffPendingIntent).build());
 
@@ -232,7 +271,7 @@ public class WifiService extends Service {
                     PendingIntent.getBroadcast(getApplicationContext(), 20, forceConnectIntent, PendingIntent.FLAG_CANCEL_CURRENT);
 
             builder.addAction(
-                    new NotificationCompat.Action.Builder(R.drawable.ic_exit_to_app_24px,
+                    new NotificationCompat.Action.Builder(R.drawable.ic_sync_24,
                             getString(R.string.force_connect),
                             forceConnectPendingIntent).build());
         }
@@ -257,6 +296,17 @@ public class WifiService extends Service {
                             headunitWifiWpa2Passphrase = prefs.getString(key, getString(R.string.headunitWifiWpa2Passphrase_default_value));
                     }
                 });
+    }
+
+    protected void registerOnStatusChangedListenerUpdateNotification() {
+        addStatusChangedListener((isRunning, isConnected) -> {
+            if (isConnected) {
+                NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
+
+                Notification notification = getNotification(getString(R.string.service_wifi_connected_text), notificationChannel);
+                notificationManager.notify(NOTIFICATION_ID, notification);
+            }
+        });
     }
 
     private void removeAllCallBacks() {
@@ -305,7 +355,7 @@ public class WifiService extends Service {
      */
     private void registerOnLostNetworkCallback() {
         if (isConnected && networkCallback == null) {
-            Log.d("Wifi Service", "registering OnLostNetworkCallback");
+            Log.d("WifiService", "registering OnLostNetworkCallback");
             final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
             if (connectivityManager != null) {
                 NetworkRequest.Builder builder = new NetworkRequest.Builder();
@@ -313,7 +363,7 @@ public class WifiService extends Service {
                 networkCallback = new ConnectivityManager.NetworkCallback() {
                     @Override
                     public void onLost(@NonNull Network network) {
-                        Log.d("Wifi Service", "Lost connection to HUR wifi, exiting the app");
+                        Log.d("WifiService", "Lost connection to HUR wifi, exiting the app");
                         setIsConnected(false);
                         removeNetworkCallback();
                         stopSelf();
@@ -336,7 +386,7 @@ public class WifiService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("WiFi-Launcher", "Start service");
+        Log.d("WifiService", "Start service");
         return START_STICKY;
     }
 
@@ -376,11 +426,15 @@ public class WifiService extends Service {
 
     private void removeNetworkCallback() {
         if (networkCallback != null) {
-            Log.d("Wifi Service", "Removing Network callback");
+            Log.d("WifiService", "Removing Network callback");
             final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
             connectivityManager.unregisterNetworkCallback(networkCallback);
             networkCallback = null;
         }
+    }
+
+    private String getCleanSsid(String value) {
+        return value.replaceAll("^\"|\"$", STRING_EMPTY);
     }
 
     @Nullable

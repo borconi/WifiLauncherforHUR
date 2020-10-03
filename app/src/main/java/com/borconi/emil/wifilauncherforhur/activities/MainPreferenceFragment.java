@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,20 +20,37 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 
 import com.borconi.emil.wifilauncherforhur.R;
+import com.borconi.emil.wifilauncherforhur.services.PermissionService;
 import com.borconi.emil.wifilauncherforhur.services.WifiService;
+import com.borconi.emil.wifilauncherforhur.utils.PermissionsUtils;
 
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.borconi.emil.wifilauncherforhur.utils.PermissionsUtils.checkAllPermissions;
+
 public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
     private static final int REQUEST_ENABLE_BT = 90;
+    PermissionService permissionService;
+    private Handler handler = new Handler();
+
+    Runnable updatePermissionsStatusRunnable = () -> {
+        updatePermissionsStatusPreference();
+        startUpdatePermissionsStatusEveryThreeSeconds();
+    };
+
+    @Override
+    public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+        setPreferencesFromResource(R.xml.preferences, rootKey);
+    }
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         LinearLayout v = (LinearLayout) super.onCreateView(inflater, container, savedInstanceState);
 
         PreferenceScreen preferenceScreen = getPreferenceScreen();
+        permissionService = new PermissionService(getActivity());
         Preference bluetoothDevicesPreference = preferenceScreen.findPreference("selected_bluetooth_devices");
 
         if (bluetoothDevicesPreference != null) {
@@ -87,25 +105,50 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
         MultiSelectListPreference bluetoothDevices = preferenceScreen.findPreference("selected_bluetooth_devices");
         setBluetoothDevicesSummary(bluetoothDevices);
-        //Preference permissionsStatusPreference = preferenceScreen.findPreference("permissions_status");
+
+        updatePermissionsStatusPreference();
+        startUpdatePermissionsStatusEveryThreeSeconds();
+    }
+
+
+    public void startUpdatePermissionsStatusEveryThreeSeconds() {
+        handler.postDelayed(updatePermissionsStatusRunnable, 3000);
+    }
+
+    protected void updatePermissionsStatusPreference() {
+        PreferenceScreen preferenceScreen = getPreferenceScreen();
+        Preference permissionsStatusPreference = preferenceScreen.findPreference("permissions_status");
+        if (permissionsStatusPreference != null) {
+            PermissionsUtils.PermissionsMissing missing = checkAllPermissions(getContext());
+            if (missing == PermissionsUtils.PermissionsMissing.NONE) {
+                permissionsStatusPreference.setTitle(getString(R.string.status_all_permissions_granted));
+                permissionsStatusPreference.setIcon(R.drawable.ic_green_done_24);
+            } else {
+                permissionsStatusPreference.setTitle(getString(R.string.status_denied_permissions));
+                permissionsStatusPreference.setIcon(R.drawable.ic_red_report_problem_24);
+                permissionsStatusPreference.setOnPreferenceClickListener(preference -> {
+                    permissionService.requestAllPermissions(true);
+                    return true;
+                });
+            }
+        }
     }
 
     protected void updateServiceStatusPreference() {
-
         PreferenceScreen preferenceScreen = getPreferenceScreen();
         Preference serviceStatusPreference = preferenceScreen.findPreference("service_status");
         if (serviceStatusPreference != null) {
             if (WifiService.isRunning()) {
                 if (WifiService.isConnected()) {
                     serviceStatusPreference.setTitle(getString(R.string.service_running_connected));
-                    serviceStatusPreference.setIcon(R.drawable.ic_green_done_24);
+                    serviceStatusPreference.setIcon(R.drawable.ic_play_arrow_24);
                 } else {
                     serviceStatusPreference.setTitle(getString(R.string.service_running_looking_hur));
-                    serviceStatusPreference.setIcon(R.drawable.ic_sync_24);
+                    serviceStatusPreference.setIcon(R.drawable.ic_search_24);
                 }
             } else {
                 serviceStatusPreference.setTitle(getString(R.string.service_not_running));
-                serviceStatusPreference.setIcon(R.drawable.ic_red_report_problem_24);
+                serviceStatusPreference.setIcon(R.drawable.ic_pause_24);
             }
         }
     }
@@ -148,6 +191,12 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
     }
 
     @Override
+    public void onStop() {
+        super.onStop();
+        handler.removeCallbacks(updatePermissionsStatusRunnable);
+    }
+
+    @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_ENABLE_BT && resultCode == Activity.RESULT_OK) {
@@ -155,10 +204,5 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
             MultiSelectListPreference bluetoothDevices = preferenceScreen.findPreference("selected_bluetooth_devices");
             tryPopulateBluetoothDevices(bluetoothDevices);
         }
-    }
-
-    @Override
-    public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-        setPreferencesFromResource(R.xml.preferences, rootKey);
     }
 }

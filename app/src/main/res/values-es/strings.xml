@@ -1,26 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wi-Fi Launcher</string>
-    <string name="alert_permission_location_denied_description">Sin el permiso de ubicación esta app no podrá acceder a los nombres de las redes Wi-Fi que es importante para la conexión automática.</string>
     <string name="alert_permission_denied_title">Permisos necesarios</string>
-    <string name="alert_need_draw_over_other_apps">Desde Android 10, los servicios en segundo plano esta restringidos para iniciar apps/activities en el telefono, esto quiere decir que si no habilita este permiso no se podrá iniciar Android Auto.</string>
-    <string name="alert_need_background_location">Desde Android 10, el permiso de ubicación es necesario que seleccione "Permitir todo el tiempo" para poder conectar Android Auto Inalámbrico.</string>
-    <string name="alert_wifi_off_description">Por favor habilite la Wi-Fi para usar Android Auto Inalámbrico</string>
+    <string name="alert_need_draw_over_other_apps">Necesitamos que permita que esta app se muestre sobre otras apps (necesario para iniciar Android Auto desde un servicio de segundo plano).\n\nDespués de presionar OK la pantalla de configuración "Mostrar sobre otras apps" aparecerá, busque Wi-Fi Launcher y permítalo.</string>
+    <string name="alert_need_background_location">Una cosa más, los permisos de ubicación son necesarios que estén en "Permitir todo el tiempo" para poder conectar Android Auto Inalámbrico.</string>
+    <string name="alert_wifi_off_description">Por favor encienda la Wi-Fi para usar Android Auto Inalámbrico</string>
+    <string name="alert_location_off_description">Por favor encienda Ubicación para usar Android Auto Inalámbrico</string>
+    <string name="alert_important_title">¡Importante!</string>
+    <string name="alert_wifi_control_description">Control de Wi-Fi (acceso especial) es necesario para esta app.\n\nDespués de presionar OK la pantalla de Configuración se abrirá y por favor vaya a Apps y Notificaciones > Acceso especial de apps (al final de la lista) > Control de Wi-Fi > Wi-Fi Launcher y permítalo.</string>
+    <string name="alert_wifi_control_samsung_description">Control de Wi-Fi (acceso especial) es necesario para esta app.\n\nDespués de presionar OK la pantalla de Configuración se abrirá y por favor vaya a Applicaciones > 3 puntitos (arriba a la derecha) > Acceso especial > Control de Wi-Fi > Wi-Fi Launcher y permítalo.</string>
+    <string name="alert_miui_special_app_request_description">Estás usando un teléfono MIUI y tiene un error cuando una app trata de agregar una red Wi-Fi sugerida (UI Crash Loop), básicamente se rompe la interfaz de usuario del sistema constantemente, por eso que necesita otorgar permisos especiales para la app antes de proceder.\n\nDespués de presionar OK se va abrir la pantalla de Configuración y por favor vaya a Administrar Aplicaciones > Permisos > Otros permisos > Otorgue cada permiso que aparece para Wi-Fi Launcher.</string>
     <string name="settings_bluetooth_stop_service_bluetooth_disconnection_title">Detener servicio al desconectarse Bluetooth</string>
     <string name="settings_bluetooth_stop_service_bluetooth_disconnection_description">Esto apagará el servicio que conecta Android Auto Inalámbrico si pierde conectividad Bluetooth. Recomendado para usuarios donde la pantalla del auto no apaga el hotspot después de apagar el auto.</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_title">Seleccione los dispositivos Bluetooth que van a iniciar esta app</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_description">No hay dispositivos seleccionados</string>
-    <string name="settings_bluetooth_selected_bluetooth_devices_turn_on">Por favor active el bluetooth</string>
-    <string name="settings_bluetooth_selected_bluetooth_devices_bt_off">Bluetooth estaba apagado, re abrir esta opción</string>
+    <string name="settings_bluetooth_selected_bluetooth_devices_turn_on">Por favor encienda el bluetooth</string>
+    <string name="settings_bluetooth_selected_bluetooth_devices_bt_off">Bluetooth estaba apagado, re abrir para refrescar</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_no_devices">No hay dispositivos Bluetooth vinculados</string>
-    <string name="settings_advanced_options_enable_force_connect_button_title">Habilitar botón Forzar Conexión</string>
-    <string name="settings_advanced_options_enable_force_connect_button_description">Agrega un boton en la notification del servicio para forzar la conexión a la pantalla del auto (necesita reiniciar el servicio)</string>
+    <string name="settings_advanced_options_enable_force_connect_button_title">Mostrar botón Forzar Conexión</string>
+    <string name="settings_advanced_options_enable_force_connect_button_description">Agrega un botón en la notificación del servicio para forzar la conexión a la pantalla del auto (necesita reiniciar el servicio)</string>
     <string name="settings_advanced_options_start_service_manually_title">Iniciar servicio Wi-Fi manualmente</string>
-    <string name="settings_advanced_options_start_service_manually_description">Inicia el servicio Wi-Fi que conecta Android Auto Inalámbrico.</string>
+    <string name="settings_advanced_options_start_service_manually_description">Inicia el servicio que conecta Android Auto Inalámbrico.</string>
     <string name="settings_wireless_headunit_ssid_title">Nombre de la Wi-Fi de la pantalla del auto</string>
     <string name="settings_wireless_headunit_wpa2_passphrase_title">Contraseña de la Wi-Fi de la pantalla del auto</string>
-    <string name="settings_wireless_note">Nota: Considere que si la pantalla del auto está rooteada puede restablecer la configuracion del hotspot (HUR/AndroidAutoConnect) cada vez que inicia</string>
-    <string name="turn_on">Habilitar</string>
+    <string name="settings_wireless_note">Nota: Considere que si la pantalla del auto está rooteada puede restablecer la configuracion del hotspot (HUR/AndroidAutoConnect) cada vez que inicia. La contraseña debe ser WPA2 Personal.</string>
+    <string name="turn_on">Encender</string>
     <string name="wireless">Wi-Fi</string>
     <string name="bluetooth">Bluetooth</string>
     <string name="advanced_options">Opciones avanzadas</string>
@@ -29,8 +33,11 @@
     <string name="service_running_looking_hur">El servicio está buscando la pantalla del auto</string>
     <string name="service_not_running">El servicio está apagado</string>
     <string name="service_wifi_title">Servicio Wi-Fi de Headunit Reloaded</string>
-    <string name="service_wifi_text">Funcionando…</string>
+    <string name="service_wifi_looking_text">Buscando la pantalla del auto…</string>
+    <string name="service_wifi_connected_text">Conectado al auto</string>
     <string name="service_wifi_ticker">El servicio Wi-Fi de Headunit Reloaded está funcionando e intentado conectar Android Auto de manera Inalámbrica</string>
     <string name="turn_off">Apagar</string>
     <string name="force_connect">Forzar conexión</string>
+    <string name="status_all_permissions_granted">Genial! Todos los permisos están otorgados</string>
+    <string name="status_denied_permissions">Oh no! Hay algunos permisos denegados, tocá acá para arreglarlo.</string>
 </resources>

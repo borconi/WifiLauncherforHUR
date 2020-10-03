@@ -8,6 +8,7 @@
     <color name="orange_700_variant">#bb4d00</color>
     <color name="teal_700">#00796b</color>
     <color name="teal_700_variant">#004c40</color>
+    <color name="teal_800_variant">#003d33</color>
     <color name="bordeaux_700">#d32f2f</color>
     <color name="bordeaux_700_variant">#9a0007</color>
     <color name="green">#2e7d32</color>
@@ -16,4 +17,5 @@
     <color name="purple_variant">#38006b</color>
     <color name="blue_500">#2196f3</color>
     <color name="blue_500_variant">#0069c0</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
 </resources>

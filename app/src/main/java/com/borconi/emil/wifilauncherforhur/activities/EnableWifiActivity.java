@@ -3,8 +3,13 @@ package com.borconi.emil.wifilauncherforhur.activities;
 import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.Settings;
 import android.view.View;
 
@@ -29,6 +34,14 @@ public class EnableWifiActivity extends AppCompatActivity {
             keyguardManager.requestDismissKeyguard(this, null);
 
         setContentView(R.layout.activity_enable_wifi);
+
+        Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        if (vibrator.hasVibrator()) {
+            vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
+        }
+        Uri notificationRingtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notificationRingtone);
+        r.play();
     }
 
     public void onTurnOnButtonClick(View v) {
@@ -39,7 +52,7 @@ public class EnableWifiActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == EnableWifiActivity.ACTION_WIFI_PANEL_REQUEST_CODE) {
+        if (requestCode == ACTION_WIFI_PANEL_REQUEST_CODE) {
             WifiService.askingForWiFi = false;
             this.finish();
         }

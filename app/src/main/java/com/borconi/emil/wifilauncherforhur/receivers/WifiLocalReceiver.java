@@ -28,23 +28,21 @@ public class WifiLocalReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.d("HU","Receiver: " + intent.getAction());
-
         if (intent.getAction() == null)
             return;
 
         switch (intent.getAction()) {
             case NETWORK_STATE_CHANGED_ACTION:
-                Log.d("WifiReceiver", "NETWORK_STATE_CHANGED_ACTION!");
+                Log.d("WifiLocalReceiver", "NETWORK_STATE_CHANGED_ACTION!");
                 wifiService.tryToConnect();
                 break;
             case ACTION_WIFI_LAUNCHER_FORCE_CONNECT:
-                Log.d("WifiReceiver", "FORCE CONNECT!");
+                Log.d("WifiLocalReceiver", "FORCE CONNECT!");
                 WifiService.setIsConnected(false);
                 wifiService.tryToConnect();
                 break;
             case ACTION_WIFI_LAUNCHER_EXIT:
-                Log.d("WifiReceiver", "TURN OFF ACTION BUTTON");
+                Log.d("WifiLocalReceiver", "TURN OFF ACTION BUTTON");
                 WifiService.setIsConnected(false);
                 context.stopService(new Intent(context, WifiService.class));
                 break;
