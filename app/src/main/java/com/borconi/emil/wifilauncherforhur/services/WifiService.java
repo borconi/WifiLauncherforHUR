@@ -151,8 +151,8 @@ public class WifiService extends Service {
                     enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
                     startActivity(enableWifiActivityIntent);
-                    mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
                 }
+                mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
                 return false;
             } else { // Android Pie can turn on Wi-Fi
                 wifiManager.setWifiEnabled(true);
@@ -165,13 +165,15 @@ public class WifiService extends Service {
         LocationManager locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
 
         if (!locationManager.isLocationEnabled()) {
-            askingForLocation = true;
-            // Let's send a message to the user to turn it on.
-            Intent enableLocationActivityIntent = new Intent(getApplicationContext(), EnableLocationActivity.class);
-            enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-            startActivity(enableLocationActivityIntent);
-            mHandler.postDelayed(CheckIfIsConnectedRunnable, FIVE_SECONDS);
+            if (!askingForLocation) {
+                askingForLocation = true;
+                // Let's send a message to the user to turn it on.
+                Intent enableLocationActivityIntent = new Intent(getApplicationContext(), EnableLocationActivity.class);
+                enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+                startActivity(enableLocationActivityIntent);
+            }
+            mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
             return false;
         }
         return true;
@@ -233,10 +235,9 @@ public class WifiService extends Service {
     protected void createNotificationChannel() {
         if (notificationChannel == null) {
             NotificationManager mNotificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
-            NotificationChannel mChannel = new NotificationChannel("wifilauncher_notification_channel_no_sound", "Wi-Fi Launcher Service", NotificationManager.IMPORTANCE_DEFAULT);
+            NotificationChannel mChannel = new NotificationChannel("wifilauncher_notification_channel_no_vibration_default", "Wi-Fi Launcher Service", NotificationManager.IMPORTANCE_DEFAULT);
             mChannel.setDescription("Wi-Fi Launcher for HUR");
-            mChannel.setShowBadge(false);
-            mChannel.setSound(null, null);
+            mChannel.enableVibration(false);
             mChannel.setLockscreenVisibility(VISIBILITY_PUBLIC);
             mNotificationManager.createNotificationChannel(mChannel);
             notificationChannel = mChannel;
@@ -247,6 +248,7 @@ public class WifiService extends Service {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), notificationChannel.getId())
                 .setContentTitle(getString(R.string.service_wifi_title))
                 .setContentText(contentText)
+                .setNotificationSilent()
                 .setSmallIcon(R.drawable.ic_aa_wifi_notification)
                 .setTicker(getString(R.string.service_wifi_ticker));
 

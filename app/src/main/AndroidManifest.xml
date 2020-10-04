@@ -43,15 +43,13 @@
         <activity
             android:name=".activities.EnableWifiActivity"
             android:screenOrientation="sensorPortrait"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
             android:noHistory="true"/>
 
         <activity
             android:name=".activities.EnableLocationActivity"
             android:screenOrientation="sensorPortrait"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
             android:noHistory="true"/>
 
         <receiver

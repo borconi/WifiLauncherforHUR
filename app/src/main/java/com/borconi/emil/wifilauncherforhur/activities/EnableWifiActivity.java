@@ -61,6 +61,8 @@ public class EnableWifiActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        setShowWhenLocked(false);
+        setTurnScreenOn(false);
         WifiService.askingForWiFi = false;
     }
 }

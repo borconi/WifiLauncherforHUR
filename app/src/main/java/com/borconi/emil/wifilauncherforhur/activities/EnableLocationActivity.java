@@ -100,6 +100,8 @@ public class EnableLocationActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        setShowWhenLocked(false);
+        setTurnScreenOn(false);
         WifiService.askingForLocation = false;
     }
 }
