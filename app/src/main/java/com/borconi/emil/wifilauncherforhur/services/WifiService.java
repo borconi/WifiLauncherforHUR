@@ -171,7 +171,7 @@ public class WifiService extends Service {
             enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
             startActivity(enableLocationActivityIntent);
-            mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
+            mHandler.postDelayed(CheckIfIsConnectedRunnable, FIVE_SECONDS);
             return false;
         }
         return true;
