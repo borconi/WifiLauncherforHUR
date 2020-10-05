@@ -119,18 +119,13 @@ public class EnableLocationActivity extends AppCompatActivity {
         PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, FULL_SCREEN_INTENT_REQUEST_CODE,
                 fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Intent deleteIntent = new Intent(context, WifiService.class);
-        deleteIntent.putExtra(DISMISS_ASKING_FOR_LOCATION_EXTRA, true);
-
-        PendingIntent deletePendingIntent = PendingIntent.getForegroundService(context, DISMISS_ASKING_FOR_LOCATION_REQUEST_CODE, deleteIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_aa_wifi_notification)
                 .setContentTitle(context.getString(R.string.notification_title))
                 .setContentText(context.getString(R.string.notification_location_off_description))
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setDeleteIntent(deletePendingIntent)
+                .setOnlyAlertOnce(true)
                 .setAutoCancel(true)
                 .setFullScreenIntent(fullScreenPendingIntent, true);
 
@@ -171,7 +166,6 @@ public class EnableLocationActivity extends AppCompatActivity {
         switch (requestCode) {
             case ACTION_LOCATION_ENABLE_RESOLUTION_REQUEST_CODE:
             case ACTION_LOCATION_SOURCE_SETTINGS_REQUEST_CODE:
-                WifiService.askingForLocation = false;
                 finish();
                 break;
         }

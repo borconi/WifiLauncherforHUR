@@ -19,13 +19,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 
 import com.borconi.emil.wifilauncherforhur.R;
-import com.borconi.emil.wifilauncherforhur.services.WifiService;
 
 @RequiresApi(api = Build.VERSION_CODES.Q)
 public class EnableWifiActivity extends AppCompatActivity {
 
-    public static final String DISMISS_ASKING_FOR_WIFI_EXTRA = "DISMISS_ASKING_FOR_WIFI";
-    public static final int DISMISS_ASKING_FOR_WIFI_REQUEST_CODE = 245;
     public static final int ACTION_WIFI_PANEL_REQUEST_CODE = 240;
     public static final int FULL_SCREEN_INTENT_REQUEST_CODE = 250;
     public static final int TURN_ON_ACTION_REQUEST_CODE = 251;
@@ -64,18 +61,13 @@ public class EnableWifiActivity extends AppCompatActivity {
         PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, FULL_SCREEN_INTENT_REQUEST_CODE,
                 fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        Intent deleteIntent = new Intent(context, WifiService.class);
-        deleteIntent.putExtra(DISMISS_ASKING_FOR_WIFI_EXTRA, true);
-
-        PendingIntent deletePendingIntent = PendingIntent.getForegroundService(context, DISMISS_ASKING_FOR_WIFI_REQUEST_CODE, deleteIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_aa_wifi_notification)
                 .setContentTitle(context.getString(R.string.notification_title))
                 .setContentText(context.getString(R.string.notification_wifi_off_description))
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setDeleteIntent(deletePendingIntent)
+                .setOnlyAlertOnce(true)
                 .setAutoCancel(true)
                 .setFullScreenIntent(fullScreenPendingIntent, true);
 
@@ -126,6 +118,5 @@ public class EnableWifiActivity extends AppCompatActivity {
         unregisterReceiver(finishBroadcastReceiver);
         NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.cancel(WIFI_NOTIFICATION_ID);
-        WifiService.askingForWifi = false;
     }
 }

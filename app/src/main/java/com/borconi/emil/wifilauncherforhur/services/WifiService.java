@@ -47,8 +47,6 @@ import java.util.List;
 
 import static android.net.wifi.WifiManager.NETWORK_STATE_CHANGED_ACTION;
 import static androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC;
-import static com.borconi.emil.wifilauncherforhur.activities.EnableLocationActivity.DISMISS_ASKING_FOR_LOCATION_EXTRA;
-import static com.borconi.emil.wifilauncherforhur.activities.EnableWifiActivity.DISMISS_ASKING_FOR_WIFI_EXTRA;
 import static com.borconi.emil.wifilauncherforhur.receivers.CarModeReceiver.ACTION_ENTER_CAR_MODE;
 import static com.borconi.emil.wifilauncherforhur.receivers.CarModeReceiver.ACTION_EXIT_CAR_MODE;
 import static com.borconi.emil.wifilauncherforhur.receivers.WifiLocalReceiver.ACTION_WIFI_LAUNCHER_EXIT;
@@ -68,7 +66,6 @@ public class WifiService extends Service {
     private static boolean isRunning = false;
     private static boolean isConnected = false;
 
-    public static boolean askingForWifi = false;
     public static boolean askingForLocation = false;
 
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -166,11 +163,8 @@ public class WifiService extends Service {
             // follow this post if Google enables it again: https://issuetracker.google.com/issues/128554616
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // Let's send a message to the user to turn it on.
-                if (!askingForWifi) {
-                    askingForWifi = true;
-                    notificationManager.notify(EnableWifiActivity.WIFI_NOTIFICATION_ID,
-                            EnableWifiActivity.getNotification(this, NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID));
-                }
+                notificationManager.notify(EnableWifiActivity.WIFI_NOTIFICATION_ID,
+                        EnableWifiActivity.getNotification(this, NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID));
                 return false;
             } else { // Android Pie can turn on Wi-Fi
                 wifiManager.setWifiEnabled(true);
@@ -183,18 +177,16 @@ public class WifiService extends Service {
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         if (!locationManager.isLocationEnabled()) {
-            if (!askingForLocation) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                notificationManager.notify(EnableLocationActivity.LOCATION_NOTIFICATION_ID,
+                        EnableLocationActivity.getNotification(this, NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID));
+            } else if (!askingForLocation) {
                 askingForLocation = true;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    notificationManager.notify(EnableLocationActivity.LOCATION_NOTIFICATION_ID,
-                            EnableLocationActivity.getNotification(this, NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID));
-                } else {
-                    // Let's send a message to the user to turn it on.
-                    Intent enableLocationActivityIntent = new Intent(this, EnableLocationActivity.class);
-                    enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                    startActivity(enableLocationActivityIntent);
-                }
+                // Let's send a message to the user to turn it on.
+                Intent enableLocationActivityIntent = new Intent(this, EnableLocationActivity.class);
+                enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+                startActivity(enableLocationActivityIntent);
             }
             return false;
         }
@@ -424,13 +416,6 @@ public class WifiService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("WifiService", "Start service");
         super.onStartCommand(intent, flags, startId);
-        if (intent.getBooleanExtra(DISMISS_ASKING_FOR_LOCATION_EXTRA, false)) {
-            askingForLocation = false;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-                intent.getBooleanExtra(DISMISS_ASKING_FOR_WIFI_EXTRA, false)) {
-            askingForWifi = false;
-        }
         return START_STICKY;
     }
 
@@ -439,7 +424,6 @@ public class WifiService extends Service {
         super.onDestroy();
         setIsRunning(false);
         askingForLocation = false;
-        askingForWifi = false;
 
         LocalBroadcastManager.getInstance(this).unregisterReceiver(wifiLocalReceiver);
         unregisterReceiver(carModeReceiver);
