@@ -33,9 +33,9 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
     private static final int REQUEST_ENABLE_BT = 90;
     PermissionService permissionService;
-    private Handler handler = new Handler();
+    private final Handler handler = new Handler();
 
-    Runnable updatePermissionsStatusRunnable = () -> {
+    private final Runnable updatePermissionsStatusRunnable = () -> {
         updatePermissionsStatusPreference();
         startUpdatePermissionsStatusEveryThreeSeconds();
     };

@@ -10,6 +10,13 @@
     <string name="alert_wifi_control_description">Control de Wi-Fi (acceso especial) es necesario para esta app.\n\nDespués de presionar OK la pantalla de Configuración se abrirá y por favor vaya a Apps y Notificaciones > Acceso especial de apps (al final de la lista) > Control de Wi-Fi > Wi-Fi Launcher y permítalo.</string>
     <string name="alert_wifi_control_samsung_description">Control de Wi-Fi (acceso especial) es necesario para esta app.\n\nDespués de presionar OK la pantalla de Configuración se abrirá y por favor vaya a Applicaciones > 3 puntitos (arriba a la derecha) > Acceso especial > Control de Wi-Fi > Wi-Fi Launcher y permítalo.</string>
     <string name="alert_miui_special_app_request_description">Estás usando un teléfono MIUI y tiene un error cuando una app trata de agregar una red Wi-Fi sugerida (UI Crash Loop), básicamente se rompe la interfaz de usuario del sistema constantemente, por eso que necesita otorgar permisos especiales para la app antes de proceder.\n\nDespués de presionar OK se va abrir la pantalla de Configuración y por favor vaya a Administrar Aplicaciones > Permisos > Otros permisos > Otorgue cada permiso que aparece para Wi-Fi Launcher.</string>
+    <string name="notification_title">Headunit Reloaded Wi-Fi Launcher</string>
+    <string name="notification_wifi_off_description">Encender Wi-Fi para inciar Android Auto Inalámbrico</string>
+    <string name="notification_location_off_description">Encender Ubicación para inciar Android Auto Inalámbrico</string>
+    <string name="notification_channel_default_name">Notificaciones del Servicio</string>
+    <string name="notification_channel_default_description">Notificaciones cuando el servicio está funcionando sin sonido/vibración</string>
+    <string name="notification_channel_high_name">Notificaciones de encender Wi-Fi o Ubicación</string>
+    <string name="notification_channel_high_description">Notificaciones cuando Wi-Fi o Ubicación están apagados con sonido/vibración</string>
     <string name="settings_bluetooth_stop_service_bluetooth_disconnection_title">Detener servicio al desconectarse Bluetooth</string>
     <string name="settings_bluetooth_stop_service_bluetooth_disconnection_description">Esto apagará el servicio que conecta Android Auto Inalámbrico si pierde conectividad Bluetooth. Recomendado para usuarios donde la pantalla del auto no apaga el hotspot después de apagar el auto.</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_title">Seleccione los dispositivos Bluetooth que van a iniciar esta app</string>

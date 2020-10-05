@@ -39,7 +39,7 @@ public class WifiLocalReceiver extends BroadcastReceiver {
             case ACTION_WIFI_LAUNCHER_FORCE_CONNECT:
                 Log.d("WifiLocalReceiver", "FORCE CONNECT!");
                 WifiService.setIsConnected(false);
-                wifiService.tryToConnect();
+                wifiService.tryToConnect(true);
                 break;
             case ACTION_WIFI_LAUNCHER_EXIT:
                 Log.d("WifiLocalReceiver", "TURN OFF ACTION BUTTON");

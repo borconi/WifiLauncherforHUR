@@ -45,9 +45,10 @@ import com.borconi.emil.wifilauncherforhur.utils.IpUtils;
 import java.util.ArrayList;
 import java.util.List;
 
-import static android.app.Notification.EXTRA_NOTIFICATION_ID;
 import static android.net.wifi.WifiManager.NETWORK_STATE_CHANGED_ACTION;
 import static androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC;
+import static com.borconi.emil.wifilauncherforhur.activities.EnableLocationActivity.DISMISS_ASKING_FOR_LOCATION_EXTRA;
+import static com.borconi.emil.wifilauncherforhur.activities.EnableWifiActivity.DISMISS_ASKING_FOR_WIFI_EXTRA;
 import static com.borconi.emil.wifilauncherforhur.receivers.CarModeReceiver.ACTION_ENTER_CAR_MODE;
 import static com.borconi.emil.wifilauncherforhur.receivers.CarModeReceiver.ACTION_EXIT_CAR_MODE;
 import static com.borconi.emil.wifilauncherforhur.receivers.WifiLocalReceiver.ACTION_WIFI_LAUNCHER_EXIT;
@@ -55,21 +56,26 @@ import static com.borconi.emil.wifilauncherforhur.receivers.WifiLocalReceiver.AC
 
 public class WifiService extends Service {
     private static final int FIVE_SECONDS = 5000;
-    private static final int EIGHT_SECONDS = 8000;
     private static final int TWO_MINUTES = 60 * 1000 * 2;
     private static final String STRING_EMPTY = "";
     private static final String WIFI_STRING_FORMAT = "\"%s\"";
     private static final int NOTIFICATION_ID = 1035;
-    public static boolean askingForWiFi = false;
-    public static boolean askingForLocation = false;
+    private static final int TURN_OFF_REQUEST_CODE = 1040;
+    private static final int FORCE_CONNECT_REQUEST_CODE = 1050;
+    private static final String NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID = "wifilauncher_notification_channel_no_vibration_default";
+    private static final String NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID = "wifilauncher_notification_channel_with_vibration_high";
     private static final List<WifiServiceStatusChangedListener> listeners = new ArrayList<>();
     private static boolean isRunning = false;
     private static boolean isConnected = false;
+
+    public static boolean askingForWifi = false;
+    public static boolean askingForLocation = false;
+
     private ConnectivityManager.NetworkCallback networkCallback;
     private CarModeReceiver carModeReceiver;
     private WifiLocalReceiver wifiLocalReceiver;
-    private NotificationChannel notificationChannel;
-    private final Handler mHandler = new Handler();
+    private NotificationManager notificationManager;
+    private final Handler handler = new Handler();
     private String headunitWifiSsid;
     private String headunitWifiWpa2Passphrase;
     private Integer networkId;
@@ -78,14 +84,15 @@ public class WifiService extends Service {
     public void onCreate() {
         super.onCreate();
         setIsRunning(true);
+        notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
         setSharedPreferencesValues();
         registerOnSharedPreferenceChangeListener();
 
         registerReceivers();
 
-        createNotificationChannel();
-        Notification notification = getNotification(getString(R.string.service_wifi_looking_text), notificationChannel);
+        verifyOrCreateNotificationChannels();
+        Notification notification = getNotification(this, getString(R.string.service_wifi_looking_text));
         startForeground(NOTIFICATION_ID, notification);
 
         registerOnStatusChangedListenerUpdateNotification();
@@ -94,11 +101,15 @@ public class WifiService extends Service {
         tryToConnect();
 
         // We will try to connect for 2 minutes, otherwise we will stop this service.
-        mHandler.postDelayed(StopServiceRunnable, TWO_MINUTES);
+        handler.postDelayed(StopServiceRunnable, TWO_MINUTES);
     }
 
     public void tryToConnect() {
-        WifiManager wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
+        tryToConnect(false);
+    }
+
+    public void tryToConnect(boolean forceConnect) {
+        registerTryToConnectCallback();
 
         // If Wi-Fi is off we won't be able to connect to car display
         if (!verifyOrEnableWifi()) {
@@ -114,6 +125,17 @@ public class WifiService extends Service {
 
         verifyOrAddHurHotspot();
 
+        // If force connect button was pressed, we are not going to check if we are connected
+        // we will try to send at least one intent to HUR
+        if (!forceConnect) {
+            checkIfIsInCarMode();
+
+            if (isConnected) {
+                return;
+            }
+        }
+
+        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         // If connected Wi-Fi is diff than desired, we will disconnect and try to reconnect.
         if (wifiManager.getConnectionInfo().getNetworkId() != networkId) {
             Log.d("WifiService", "Start up, not connected to HUR network, is it in range?");
@@ -121,38 +143,34 @@ public class WifiService extends Service {
             wifiManager.disconnect();
             wifiManager.enableNetwork(networkId, true);
             wifiManager.reconnect();
-            mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
         }
 
         // If Wi-Fi is in connected state, we will send AAWireless intent to HUR.
         if (getCleanSsid(wifiManager.getConnectionInfo().getSSID()).equalsIgnoreCase(headunitWifiSsid) &&
                 wifiManager.getConnectionInfo().getSupplicantState() == SupplicantState.COMPLETED) {
-            removeAllCallBacks();
-            mHandler.postDelayed(CheckIfIsConnectedRunnable, FIVE_SECONDS);
 
             String gatewayAddress = IpUtils.IntToIp(wifiManager.getDhcpInfo().gateway);
-            HurConnection.connect(getApplicationContext(), gatewayAddress);
-            Log.d("WifiService", "Sending Intent to HUR! > gatewayAddress: " + gatewayAddress);
+            if (!gatewayAddress.equalsIgnoreCase("0.0.0.0")) {
+                HurConnection.connect(this, gatewayAddress);
+                Log.d("WifiService", "Sending Intent to HUR! > gatewayAddress: " + gatewayAddress);
+            }
         }
     }
 
     protected boolean verifyOrEnableWifi() {
-        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 
         if (!wifiManager.isWifiEnabled()) {
             // Since Android 10 we can't turn on/off wifi programmatically
             // https://developer.android.com/reference/android/net/wifi/WifiManager#setWifiEnabled(boolean)
             // follow this post if Google enables it again: https://issuetracker.google.com/issues/128554616
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                if (!askingForWiFi) {
-                    askingForWiFi = true;
-                    // Let's send a message to the user to turn it on.
-                    Intent enableWifiActivityIntent = new Intent(getApplicationContext(), EnableWifiActivity.class);
-                    enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    enableWifiActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                    startActivity(enableWifiActivityIntent);
+                // Let's send a message to the user to turn it on.
+                if (!askingForWifi) {
+                    askingForWifi = true;
+                    notificationManager.notify(EnableWifiActivity.WIFI_NOTIFICATION_ID,
+                            EnableWifiActivity.getNotification(this, NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID));
                 }
-                mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
                 return false;
             } else { // Android Pie can turn on Wi-Fi
                 wifiManager.setWifiEnabled(true);
@@ -162,18 +180,22 @@ public class WifiService extends Service {
     }
 
     protected boolean verifyOrEnableLocation() {
-        LocationManager locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
         if (!locationManager.isLocationEnabled()) {
             if (!askingForLocation) {
                 askingForLocation = true;
-                // Let's send a message to the user to turn it on.
-                Intent enableLocationActivityIntent = new Intent(getApplicationContext(), EnableLocationActivity.class);
-                enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                startActivity(enableLocationActivityIntent);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    notificationManager.notify(EnableLocationActivity.LOCATION_NOTIFICATION_ID,
+                            EnableLocationActivity.getNotification(this, NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID));
+                } else {
+                    // Let's send a message to the user to turn it on.
+                    Intent enableLocationActivityIntent = new Intent(this, EnableLocationActivity.class);
+                    enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+                    startActivity(enableLocationActivityIntent);
+                }
             }
-            mHandler.postDelayed(CheckIfIsConnectedRunnable, EIGHT_SECONDS);
             return false;
         }
         return true;
@@ -181,7 +203,7 @@ public class WifiService extends Service {
 
     protected void verifyOrAddHurHotspot() {
         if (networkId == null) {
-            WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 
             @SuppressLint("MissingPermission")
             List<WifiConfiguration> configuredWiFis = wifiManager.getConfiguredNetworks();
@@ -232,45 +254,51 @@ public class WifiService extends Service {
         LocalBroadcastManager.getInstance(this).registerReceiver(wifiLocalReceiver, intentFilterWifiReceiverLocal);
     }
 
-    protected void createNotificationChannel() {
-        if (notificationChannel == null) {
-            NotificationManager mNotificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
-            NotificationChannel mChannel = new NotificationChannel("wifilauncher_notification_channel_no_vibration_default", "Wi-Fi Launcher Service", NotificationManager.IMPORTANCE_DEFAULT);
-            mChannel.setDescription("Wi-Fi Launcher for HUR");
-            mChannel.enableVibration(false);
-            mChannel.setLockscreenVisibility(VISIBILITY_PUBLIC);
-            mNotificationManager.createNotificationChannel(mChannel);
-            notificationChannel = mChannel;
+    protected void verifyOrCreateNotificationChannels() {
+        NotificationChannel notificationChannelNoVibrationDefault = notificationManager.getNotificationChannel(NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID);
+        if (notificationChannelNoVibrationDefault == null) {
+            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID, getString(R.string.notification_channel_default_name), NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription(getString(R.string.notification_channel_default_description));
+            channel.enableVibration(false);
+            channel.setSound(null, null);
+            channel.setLockscreenVisibility(VISIBILITY_PUBLIC);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        NotificationChannel notificationChannelWithVibrationImportant = notificationManager.getNotificationChannel(NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID);
+        if (notificationChannelWithVibrationImportant == null) {
+            NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID, getString(R.string.notification_channel_high_name), NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription(getString(R.string.notification_channel_high_description));
+            channel.enableVibration(true);
+            channel.setLockscreenVisibility(VISIBILITY_PUBLIC);
+            notificationManager.createNotificationChannel(channel);
         }
     }
 
-    protected Notification getNotification(String contentText, NotificationChannel notificationChannel) {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), notificationChannel.getId())
+    protected Notification getNotification(Context context, String contentText) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID)
                 .setContentTitle(getString(R.string.service_wifi_title))
                 .setContentText(contentText)
-                .setNotificationSilent()
                 .setSmallIcon(R.drawable.ic_aa_wifi_notification)
                 .setTicker(getString(R.string.service_wifi_ticker));
 
-        Intent turnOffIntent = new Intent(getApplicationContext(), WifiReceiver.class);
+        Intent turnOffIntent = new Intent(context, WifiReceiver.class);
         turnOffIntent.setAction(ACTION_WIFI_LAUNCHER_EXIT);
-        turnOffIntent.putExtra(EXTRA_NOTIFICATION_ID, 10);
 
         PendingIntent turnOffPendingIntent =
-                PendingIntent.getBroadcast(getApplicationContext(), 10, turnOffIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+                PendingIntent.getBroadcast(context, TURN_OFF_REQUEST_CODE, turnOffIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         builder.addAction(
                 new NotificationCompat.Action.Builder(R.drawable.ic_power_settings_new_24,
                         getString(R.string.turn_off),
                         turnOffPendingIntent).build());
 
-        if (PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("enableForceConnectButton", false)) {
-            Intent forceConnectIntent = new Intent(getApplicationContext(), WifiReceiver.class);
+        if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("enableForceConnectButton", false)) {
+            Intent forceConnectIntent = new Intent(context, WifiReceiver.class);
             forceConnectIntent.setAction(ACTION_WIFI_LAUNCHER_FORCE_CONNECT);
-            forceConnectIntent.putExtra(EXTRA_NOTIFICATION_ID, 20);
 
             PendingIntent forceConnectPendingIntent =
-                    PendingIntent.getBroadcast(getApplicationContext(), 20, forceConnectIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+                    PendingIntent.getBroadcast(context, FORCE_CONNECT_REQUEST_CODE, forceConnectIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
             builder.addAction(
                     new NotificationCompat.Action.Builder(R.drawable.ic_sync_24,
@@ -282,14 +310,14 @@ public class WifiService extends Service {
     }
 
     protected void setSharedPreferencesValues() {
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         headunitWifiSsid = sharedPreferences.getString("headunitWifiSsid", getString(R.string.headunitWifiSsid_default_value));
         headunitWifiWpa2Passphrase = sharedPreferences.getString("headunitWifiWpa2Passphrase", getString(R.string.headunitWifiWpa2Passphrase_default_value));
     }
 
     protected void registerOnSharedPreferenceChangeListener() {
-        PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
+        PreferenceManager.getDefaultSharedPreferences(this)
                 .registerOnSharedPreferenceChangeListener((prefs, key) -> {
                     switch (key) {
                         case "headunitWifiSsid":
@@ -303,17 +331,28 @@ public class WifiService extends Service {
     protected void registerOnStatusChangedListenerUpdateNotification() {
         addStatusChangedListener((isRunning, isConnected) -> {
             if (isConnected) {
-                NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
-
-                Notification notification = getNotification(getString(R.string.service_wifi_connected_text), notificationChannel);
+                Notification notification = getNotification(this, getString(R.string.service_wifi_connected_text));
                 notificationManager.notify(NOTIFICATION_ID, notification);
+                registerOnLostNetworkCallback();
+                removeTryToConnectCallback();
+                removeAllUserNotifications();
             }
         });
     }
 
-    private void removeAllCallBacks() {
-        mHandler.removeCallbacks(TryToConnectRunnable);
-        mHandler.removeCallbacks(CheckIfIsConnectedRunnable);
+    private void removeTryToConnectCallback() {
+        handler.removeCallbacks(TryToConnectRunnable);
+    }
+
+    private void registerTryToConnectCallback() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (!handler.hasCallbacks(TryToConnectRunnable)) {
+                handler.postDelayed(TryToConnectRunnable, FIVE_SECONDS);
+            }
+        } else {
+            handler.removeCallbacks(TryToConnectRunnable);
+            handler.postDelayed(TryToConnectRunnable, FIVE_SECONDS);
+        }
     }
 
     private final Runnable TryToConnectRunnable = () -> {
@@ -324,30 +363,16 @@ public class WifiService extends Service {
             tryToConnect();
         }
     };
-    private final Runnable CheckIfIsConnectedRunnable = new Runnable() {
-        public void run() {
-            Log.d("WifiService", "CHECKING IF IT'S CONNECTED");
-
-            checkIfIsInCarMode();
-
-            if (!isConnected) {
-                mHandler.removeCallbacks(TryToConnectRunnable);
-                mHandler.postDelayed(TryToConnectRunnable, FIVE_SECONDS);
-            } else {
-                mHandler.removeCallbacks(CheckIfIsConnectedRunnable);
-                mHandler.removeCallbacks(TryToConnectRunnable);
-            }
-        }
-    };
 
     private final Runnable StopServiceRunnable = new Runnable() {
         public void run() {
             Log.d("WifiService", "STOP SERVICE RUNNABLE CHECK");
             if (!isConnected) {
                 Log.d("WifiService", "STOPPING SERVICE BY TIME (2 min)");
+                stopForeground(true);
                 stopSelf();
             } else {
-                mHandler.removeCallbacks(StopServiceRunnable);
+                handler.removeCallbacks(StopServiceRunnable);
             }
         }
     };
@@ -368,6 +393,7 @@ public class WifiService extends Service {
                         Log.d("WifiService", "Lost connection to HUR wifi, exiting the app");
                         setIsConnected(false);
                         removeNetworkCallback();
+                        stopForeground(true);
                         stopSelf();
                     }
                 };
@@ -382,13 +408,29 @@ public class WifiService extends Service {
         if (((UiModeManager) getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR) {
             Log.d("WifiService", "ENTER CAR MODE (detected on WifiService)");
             setIsConnected(true);
-            registerOnLostNetworkCallback();
         }
+    }
+
+    protected void removeAllUserNotifications() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            notificationManager.cancel(EnableWifiActivity.WIFI_NOTIFICATION_ID);
+            notificationManager.cancel(EnableLocationActivity.LOCATION_NOTIFICATION_ID);
+            sendBroadcast(new Intent(EnableWifiActivity.FINISH_WIFI_USER_ACTION_ACTIVITIES_INTENT));
+        }
+        sendBroadcast(new Intent(EnableLocationActivity.FINISH_LOCATION_USER_ACTION_ACTIVITIES_INTENT));
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("WifiService", "Start service");
+        super.onStartCommand(intent, flags, startId);
+        if (intent.getBooleanExtra(DISMISS_ASKING_FOR_LOCATION_EXTRA, false)) {
+            askingForLocation = false;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+                intent.getBooleanExtra(DISMISS_ASKING_FOR_WIFI_EXTRA, false)) {
+            askingForWifi = false;
+        }
         return START_STICKY;
     }
 
@@ -396,12 +438,16 @@ public class WifiService extends Service {
     public void onDestroy() {
         super.onDestroy();
         setIsRunning(false);
+        askingForLocation = false;
+        askingForWifi = false;
 
         LocalBroadcastManager.getInstance(this).unregisterReceiver(wifiLocalReceiver);
         unregisterReceiver(carModeReceiver);
 
-        removeAllCallBacks();
-        mHandler.removeCallbacks(StopServiceRunnable);
+        removeAllUserNotifications();
+
+        removeTryToConnectCallback();
+        handler.removeCallbacks(StopServiceRunnable);
     }
 
     public static void addStatusChangedListener(WifiServiceStatusChangedListener listener) {

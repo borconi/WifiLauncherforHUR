@@ -32,8 +32,8 @@ public class PermissionService {
 
     private static final int OPEN_SETTINGS_MIUI_SPECIAL_ACCESS_REQUEST_CODE = 400;
 
-    private Activity activity;
-    private SharedPreferences sharedPreferences;
+    private final Activity activity;
+    private final SharedPreferences sharedPreferences;
     private boolean alertDialogOpen = false;
 
     public PermissionService(Activity activity) {
@@ -171,7 +171,7 @@ public class PermissionService {
     public void requestAllPermissions(boolean showRationaleMessage) {
         if (!requestDrawOverlays(showRationaleMessage)) {
             return;
-        };
+        }
 
         if (!requestLocationServices(showRationaleMessage)) {
             return;
