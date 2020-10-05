@@ -62,7 +62,7 @@ public class EnableWifiActivity extends AppCompatActivity {
         Intent fullScreenIntent = new Intent(context, EnableWifiActivity.class);
 
         PendingIntent fullScreenPendingIntent = PendingIntent.getActivity(context, FULL_SCREEN_INTENT_REQUEST_CODE,
-                fullScreenIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+                fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         Intent deleteIntent = new Intent(context, WifiService.class);
         deleteIntent.putExtra(DISMISS_ASKING_FOR_WIFI_EXTRA, true);
@@ -83,7 +83,7 @@ public class EnableWifiActivity extends AppCompatActivity {
         turnOnIntent.putExtra("DISPLAY_ACTION_PANEL", true);
 
         PendingIntent turnOnPendingIntent =
-                PendingIntent.getActivity(context, TURN_ON_ACTION_REQUEST_CODE, turnOnIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+                PendingIntent.getActivity(context, TURN_ON_ACTION_REQUEST_CODE, turnOnIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
         builder.addAction(
                 new NotificationCompat.Action.Builder(R.drawable.ic_power_settings_new_24,
