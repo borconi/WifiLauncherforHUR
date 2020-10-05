@@ -1,10 +1,21 @@
 <resources>
     <string name="app_name">Wi-Fi Launcher</string>
-    <string name="alert_permission_location_denied_description">Without location permissions app won\'t be able to access Wi-Fi network names which is crucial part for automation.</string>
     <string name="alert_permission_denied_title">Permissions needed</string>
-    <string name="alert_need_draw_over_other_apps">Starting with Android 10, background services are restricted to start apps/activities on users screen, meaning it won\'t be able to launch Android Auto without this permission.</string>
-    <string name="alert_need_background_location">Starting with Android 10, location needs to be set to "Allowed all the time" in order to connect Wireless Android Auto</string>
-    <string name="alert_wifi_off_description">Please turn on Wi-Fi to start Wireless Android Auto</string>
+    <string name="alert_need_draw_over_other_apps">We need you to allow this app to Display over other apps (necessary to start Android Auto from a background service).\n\nAfter tapping OK you will land in "Display over other apps" settings screen, please look for Wi-Fi Launcher and allow it.</string>
+    <string name="alert_need_background_location">One more thing, Location Services needs to be set to "Allowed all the time" in order to connect Wireless Android Auto</string>
+    <string name="alert_wifi_off_description">Please turn Wi-Fi on to start Wireless Android Auto</string>
+    <string name="alert_location_off_description">Please turn Location on to start Wireless Android Auto</string>
+    <string name="alert_important_title">Important!</string>
+    <string name="alert_wifi_control_description">Wi-Fi Control (special app access) is necessary for this app.\n\nAfter tapping OK Settings screen will be open and please go to Apps &amp; notifications > Special app access (bottom of the list) > Wi-Fi Control > Wi-Fi Launcher and allow it.</string>
+    <string name="alert_wifi_control_samsung_description">Wi-Fi Control (special app access) is necessary for this app.\n\nAfter tapping OK Settings screen will be open and please go to Apps > 3 dots (upper right) > Special access > Wi-Fi Control > Wi-Fi Launcher and allow it.</string>
+    <string name="alert_miui_special_app_request_description">You are running MIUI phone and it has a bug while trying to add Wi-Fi Suggestions (UI crash loop), it will crash the system UI because of that bug, so you need to manually grant Special App Access to Wi-Fi Launcher before you proceed.\n\nAfter tapping OK it will open Settings screen and please go to Manage apps > Permissions > Other permissions > Grant every single permission that appears for Wi-Fi Launcher.</string>
+    <string name="notification_title">Headunit Reloaded Wi-Fi Launcher</string>
+    <string name="notification_wifi_off_description">Turn Wi-Fi on to start Wireless Android Auto</string>
+    <string name="notification_location_off_description">Turn Location on to start Wireless Android Auto</string>
+    <string name="notification_channel_default_name">Service Notifications</string>
+    <string name="notification_channel_default_description">Notifications when service is running with no sound/vibration</string>
+    <string name="notification_channel_high_name">Turn on Wi-Fi or Location Notifications</string>
+    <string name="notification_channel_high_description">Notifications when Wi-Fi or Location are off with sound/vibration</string>
     <string name="settings_bluetooth_stop_service_bluetooth_disconnection_title">Stop Service on Bluetooth disconnection</string>
     <string name="settings_bluetooth_stop_service_bluetooth_disconnection_description">This will turn the service off that connects Wireless Android Auto if it loses bluetooth connection. Recommended for users when car display is not turning hotspot off after turning the car off.</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_title">Select on which Bluetooth devices to start this app</string>
@@ -12,13 +23,13 @@
     <string name="settings_bluetooth_selected_bluetooth_devices_turn_on">Please turn on bluetooth</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_bt_off">Bluetooth was off, re open it again</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_no_devices">No paired Bluetooth devices</string>
-    <string name="settings_advanced_options_enable_force_connect_button_title">Enable Force Connect button</string>
+    <string name="settings_advanced_options_enable_force_connect_button_title">Add Force Connect button</string>
     <string name="settings_advanced_options_enable_force_connect_button_description">Adds a button in service notification to force connection to car display (needs service restart)</string>
     <string name="settings_advanced_options_start_service_manually_title">Start Wi-Fi service manually</string>
     <string name="settings_advanced_options_start_service_manually_description">This will start Wi-Fi service to connect Wireless Android Auto.</string>
     <string name="settings_wireless_headunit_ssid_title">Car display Wi-Fi name</string>
     <string name="settings_wireless_headunit_wpa2_passphrase_title">Car display Wi-Fi password</string>
-    <string name="settings_wireless_note">Note: Consider if your car display is rooted it can reset hotspot settings to default (HUR/AndroidAutoConnect) every time it starts</string>
+    <string name="settings_wireless_note">Note: Consider if your car display is rooted it can reset hotspot settings to default (HUR/AndroidAutoConnect) every time it starts. Password must be WPA2 Personal.</string>
     <string name="turn_on">Turn on</string>
     <string name="wireless">Wireless</string>
     <string name="bluetooth">Bluetooth</string>
@@ -28,8 +39,11 @@
     <string name="service_running_looking_hur">Service is looking for car display</string>
     <string name="service_not_running">Service is not running</string>
     <string name="service_wifi_title">Headunit Reloaded Wi-Fi Service</string>
-    <string name="service_wifi_text">Running…</string>
+    <string name="service_wifi_looking_text">Looking for car display…</string>
+    <string name="service_wifi_connected_text">Connected to your car</string>
     <string name="service_wifi_ticker">Headunit Reloaded Wi-Fi Service is running trying to connect Wireless Android Auto</string>
     <string name="turn_off">Turn off</string>
     <string name="force_connect">Force connect</string>
+    <string name="status_all_permissions_granted">Great! All permissions are granted</string>
+    <string name="status_denied_permissions">Oh no! There are permissions denied, tap here to fix it</string>
 </resources>

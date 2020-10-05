@@ -43,13 +43,13 @@ public class CarModeReceiver extends BroadcastReceiver {
                 }
                 break;
             case ACTION_ENTER_CAR_MODE:
-                Log.d("WifiReceiver", "ENTER CAR MODE");
+                Log.d("CarModeReceiver", "ENTER CAR MODE");
                 WifiService.setIsConnected(true);
                 // Do not stop Service here ever. Service should be alive all the time AA is connected.
                 // User can turn it off from notification. But ideally we would like to setIsConnected(false) when AA is closed.
                 break;
             case ACTION_EXIT_CAR_MODE:
-                Log.d("WifiReceiver", "EXIT CAR MODE STOP SERVICE");
+                Log.d("CarModeReceiver", "EXIT CAR MODE STOP SERVICE");
                 WifiService.setIsConnected(false);
                 context.stopService(new Intent(context, WifiService.class));
                 break;

@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".activities.EnableWifiActivity">
+    tools:context=".activities.EnableLocationActivity">
 
     <ImageView
         android:id="@+id/imageView"
@@ -33,7 +33,7 @@
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/alert_wifi_off_description"
+        android:text="@string/alert_location_off_description"
         android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Large"
          />
