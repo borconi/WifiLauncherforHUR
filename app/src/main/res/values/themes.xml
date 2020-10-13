@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <style name="SplashTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:statusBarColor">@color/teal_800_variant</item>
+    </style>
+
     <style name="AppTheme.WiFiLauncher" parent="Base.AppTheme.WiFiLauncher" />
 
     <style name="Base.AppTheme.WiFiLauncher" parent="Theme.MaterialComponents.DayNight.DarkActionBar">

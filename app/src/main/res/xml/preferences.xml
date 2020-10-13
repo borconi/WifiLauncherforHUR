@@ -8,12 +8,12 @@
         android:title="@string/status"
         android:key="status_category">
 
-<!--        <Preference-->
-<!--            app:iconSpaceReserved="true"-->
-<!--            android:enabled="true"-->
-<!--            android:key="permissions_status"-->
-<!--            android:persistent="false"-->
-<!--            />-->
+        <Preference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="permissions_status"
+            android:persistent="false"
+            />
 
         <Preference
             app:iconSpaceReserved="true"
