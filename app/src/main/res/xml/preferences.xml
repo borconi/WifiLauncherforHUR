@@ -87,15 +87,7 @@
         android:icon="@drawable/ic_settings_24"
         android:title="@string/advanced_options"
         android:key="advanced_options_category"
-        app:initialExpandedChildrenCount="0">
-
-        <SwitchPreference
-            app:iconSpaceReserved="true"
-            android:enabled="true"
-            android:key="enableForceConnectButton"
-            android:persistent="true"
-            android:title="@string/settings_advanced_options_enable_force_connect_button_title"
-            android:summary="@string/settings_advanced_options_enable_force_connect_button_description" />
+        app:initialExpandedChildrenCount="1">
 
         <ListPreference
             android:key="service_running_for"
@@ -105,6 +97,14 @@
             android:entries="@array/service_running_for_entries"
             android:entryValues="@array/service_running_for_entry_values"
             app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="enableForceConnectButton"
+            android:persistent="true"
+            android:title="@string/settings_advanced_options_enable_force_connect_button_title"
+            android:summary="@string/settings_advanced_options_enable_force_connect_button_description" />
 
         <Preference
             app:iconSpaceReserved="true"
