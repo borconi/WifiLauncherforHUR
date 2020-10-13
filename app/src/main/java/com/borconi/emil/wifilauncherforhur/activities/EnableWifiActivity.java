@@ -45,8 +45,8 @@ public class EnableWifiActivity extends AppCompatActivity {
 
         if (getIntent().getBooleanExtra("DISPLAY_ACTION_PANEL", false)) {
             findViewById(R.id.turn_on_button).setVisibility(View.INVISIBLE);
-            NotificationManager mNotificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
-            mNotificationManager.cancel(WIFI_NOTIFICATION_ID);
+            NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationManager.cancel(WIFI_NOTIFICATION_ID);
             startActivityForResult(new Intent(Settings.Panel.ACTION_WIFI), ACTION_WIFI_PANEL_REQUEST_CODE);
         }
     }

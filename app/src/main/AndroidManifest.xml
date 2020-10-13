@@ -53,6 +53,9 @@
             android:excludeFromRecents="true"
             android:noHistory="true"/>
 
+        <service android:name=".services.WifiService"
+            android:foregroundServiceType="mediaProjection" />
+
         <receiver
             android:name=".receivers.BluetoothReceiver"
             android:permission="android.permission.BLUETOOTH">
@@ -62,9 +65,6 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-
-        <service android:name=".services.WifiService"
-            android:foregroundServiceType="mediaProjection" />
 
         <receiver
             android:name=".receivers.WifiReceiver"

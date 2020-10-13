@@ -54,7 +54,6 @@ import static com.borconi.emil.wifilauncherforhur.receivers.WifiLocalReceiver.AC
 
 public class WifiService extends Service {
     private static final int FIVE_SECONDS = 5000;
-    private static final int TWO_MINUTES = 60 * 1000 * 2;
     private static final String STRING_EMPTY = "";
     private static final String WIFI_STRING_FORMAT = "\"%s\"";
     private static final int NOTIFICATION_ID = 1035;
@@ -68,6 +67,7 @@ public class WifiService extends Service {
 
     public static boolean askingForLocation = false;
 
+    private int serviceTimeoutInMinutes = 60 * 1000 * 2; // Default 2 minutes.
     private ConnectivityManager.NetworkCallback networkCallback;
     private CarModeReceiver carModeReceiver;
     private WifiLocalReceiver wifiLocalReceiver;
@@ -98,7 +98,8 @@ public class WifiService extends Service {
         tryToConnect();
 
         // We will try to connect for 2 minutes, otherwise we will stop this service.
-        handler.postDelayed(StopServiceRunnable, TWO_MINUTES);
+        Log.d("WifiService", String.format("STOPPING SERVICE IN %s mins", serviceTimeoutInMinutes));
+        handler.postDelayed(StopServiceRunnable, serviceTimeoutInMinutes);
     }
 
     public void tryToConnect() {
@@ -304,6 +305,11 @@ public class WifiService extends Service {
     protected void setSharedPreferencesValues() {
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
+        String serviceRunningFor = sharedPreferences.getString("service_running_for", getString(R.string.service_running_for_default_value));
+        if (serviceRunningFor != null) {
+            serviceTimeoutInMinutes = Integer.parseInt(serviceRunningFor) * 60 * 1000;
+        }
+
         headunitWifiSsid = sharedPreferences.getString("headunitWifiSsid", getString(R.string.headunitWifiSsid_default_value));
         headunitWifiWpa2Passphrase = sharedPreferences.getString("headunitWifiWpa2Passphrase", getString(R.string.headunitWifiWpa2Passphrase_default_value));
     }
@@ -360,7 +366,7 @@ public class WifiService extends Service {
         public void run() {
             Log.d("WifiService", "STOP SERVICE RUNNABLE CHECK");
             if (!isConnected) {
-                Log.d("WifiService", "STOPPING SERVICE BY TIME (2 min)");
+                Log.d("WifiService", String.format("STOPPING SERVICE BY TIME (%s min)", serviceTimeoutInMinutes));
                 stopForeground(true);
                 stopSelf();
             } else {

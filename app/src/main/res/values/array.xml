@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="service_running_for_entries">
+        <item>1 min</item>
+        <item>2 mins (default)</item>
+        <item>3 mins</item>
+        <item>4 mins</item>
+        <item>5 mins</item>
+        <item>10 mins</item>
+    </string-array>
+    <string-array name="service_running_for_entry_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>10</item>
+    </string-array>
+</resources>
