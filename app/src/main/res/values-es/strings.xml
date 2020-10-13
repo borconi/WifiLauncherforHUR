@@ -24,7 +24,7 @@
     <string name="settings_bluetooth_selected_bluetooth_devices_turn_on">Por favor encienda el bluetooth</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_bt_off">Bluetooth estaba apagado, re abrir para refrescar</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_no_devices">No hay dispositivos Bluetooth vinculados</string>
-    <string name="settings_bluetooth_selected_bluetooth_devices_forgotten_device">Disp. olvidado</string>
+    <string name="settings_bluetooth_selected_bluetooth_devices_forgotten_device">Dispositivo olvidado</string>
     <string name="settings_advanced_options_enable_force_connect_button_title">Mostrar botón Forzar Conexión</string>
     <string name="settings_advanced_options_enable_force_connect_button_description">Agrega un botón en la notificación del servicio para forzar la conexión a la pantalla del auto (necesita reiniciar el servicio)</string>
     <string name="settings_advanced_options_start_service_manually_title">Iniciar servicio Wi-Fi manualmente</string>
