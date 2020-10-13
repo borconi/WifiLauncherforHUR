@@ -23,6 +23,7 @@
     <string name="settings_bluetooth_selected_bluetooth_devices_turn_on">Please turn on bluetooth</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_bt_off">Bluetooth was off, re open it again</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_no_devices">No paired Bluetooth devices</string>
+    <string name="settings_bluetooth_selected_bluetooth_devices_forgotten_device">Forgotten device</string>
     <string name="settings_advanced_options_enable_force_connect_button_title">Add Force Connect button</string>
     <string name="settings_advanced_options_enable_force_connect_button_description">Adds a button in service notification to force connection to car display (needs service restart)</string>
     <string name="settings_advanced_options_start_service_manually_title">Start Wi-Fi service manually</string>

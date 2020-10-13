@@ -181,15 +181,17 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
             return;
         }
         if (bluetoothDevices != null) {
-            if (bluetoothDevices.getValues() != null && bluetoothDevices.getValues().size() > 0 &&
-                    bluetoothDevices.getEntries() != null && bluetoothDevices.getEntries().length > 0) {
-                bluetoothDevices.setSummary(bluetoothDevices.getValues().stream()
+            Set<String> values = bluetoothDevices.getValues().stream()
+                    .filter(v -> !v.equalsIgnoreCase("")).collect(Collectors.toSet());
+
+            if (values.size() > 0) {
+                bluetoothDevices.setSummary(values.stream()
                         .map(v -> {
                             int indexOfValue = bluetoothDevices.findIndexOfValue(v);
                             if (indexOfValue >= 0) {
                                 return bluetoothDevices.getEntries()[indexOfValue];
                             }
-                            return "Unknown device";
+                            return getString(R.string.settings_bluetooth_selected_bluetooth_devices_forgotten_device);
                         }).collect(Collectors.joining(", ")));
             } else {
                 bluetoothDevices.setSummary(R.string.settings_bluetooth_selected_bluetooth_devices_description);
