@@ -72,7 +72,6 @@
             android:title="@string/settings_wireless_headunit_wpa2_passphrase_title"
             app:useSimpleSummaryProvider="true"/>
 
-
         <Preference
             app:iconSpaceReserved="true"
             android:enabled="true"
@@ -97,6 +96,15 @@
             android:persistent="true"
             android:title="@string/settings_advanced_options_enable_force_connect_button_title"
             android:summary="@string/settings_advanced_options_enable_force_connect_button_description" />
+
+        <ListPreference
+            android:key="service_running_for"
+            android:title="@string/settings_advanced_options_service_running_for_title"
+            android:persistent="true"
+            android:defaultValue="@string/service_running_for_default_value"
+            android:entries="@array/service_running_for_entries"
+            android:entryValues="@array/service_running_for_entry_values"
+            app:useSimpleSummaryProvider="true" />
 
         <Preference
             app:iconSpaceReserved="true"
