@@ -36,7 +36,7 @@
     <string name="settings_wireless_headunit_wifi_using_router_title">Conecta usando un Router</string>
     <string name="settings_wireless_headunit_wifi_using_router_description">No lo habilite si esta usando el hotspot de la pantalla del auto</string>
     <string name="settings_wireless_router_note">Nota: Utilice una IP estática/reservada en la pantalla del auto para evitar que asigne una IP distinta el Router cada vez que conecte (deshabilite DHCP en la pantalla del auto o reserve la IP en el Router). Si no hace esto no se conectará correctamente.</string>
-    <string name="settings_wireless_wifi_name_note">Nota: Considere Headunit Reloaded puede restablecer la configuracion del hotspot (HUR/AndroidAutoConnect) cada vez que inicia. La contraseña debe ser WPA2 Personal.</string>
+    <string name="settings_wireless_wifi_name_note">Nota: Considere que Headunit Reloaded puede restablecer la configuracion del hotspot (HUR/AndroidAutoConnect) cada vez que inicia. La contraseña debe ser WPA2 Personal.</string>
     <string name="turn_on">Encender</string>
     <string name="wireless">Wi-Fi</string>
     <string name="bluetooth">Bluetooth</string>
