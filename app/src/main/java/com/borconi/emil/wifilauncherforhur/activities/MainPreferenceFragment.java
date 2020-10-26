@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.LayoutInflater;
@@ -17,13 +18,16 @@ import androidx.annotation.Nullable;
 import androidx.preference.MultiSelectListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceManager;
 import androidx.preference.PreferenceScreen;
+import androidx.preference.SwitchPreference;
 
 import com.borconi.emil.wifilauncherforhur.R;
 import com.borconi.emil.wifilauncherforhur.services.PermissionService;
 import com.borconi.emil.wifilauncherforhur.services.WifiService;
 import com.borconi.emil.wifilauncherforhur.utils.PermissionsUtils;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -50,8 +54,8 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         LinearLayout v = (LinearLayout) super.onCreateView(inflater, container, savedInstanceState);
 
-        PreferenceScreen preferenceScreen = getPreferenceScreen();
         permissionService = new PermissionService(getActivity());
+        PreferenceScreen preferenceScreen = getPreferenceScreen();
         Preference bluetoothDevicesPreference = preferenceScreen.findPreference("selected_bluetooth_devices");
 
         if (bluetoothDevicesPreference != null) {
@@ -94,6 +98,14 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
             });
         }
 
+        SwitchPreference headunitWifiUsingRouterPreference = preferenceScreen.findPreference("settings_wireless_headunit_wifi_using_router");
+        if (headunitWifiUsingRouterPreference != null) {
+            headunitWifiUsingRouterPreference.setOnPreferenceChangeListener((preference, newValue) -> {
+                setWirelessPreferences((boolean)newValue);
+                return true;
+            });
+        }
+
         return v;
     }
 
@@ -108,6 +120,10 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         setBluetoothDevicesSummary(bluetoothDevices);
 
         updatePermissionsStatusPreference();
+
+        SwitchPreference headunitWifiUsingRouterPreference = Objects.requireNonNull(preferenceScreen.findPreference("settings_wireless_headunit_wifi_using_router"));
+        setWirelessPreferences(headunitWifiUsingRouterPreference.isChecked());
+
         startUpdatePermissionsStatusEveryThreeSeconds();
     }
 
@@ -197,6 +213,17 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
                 bluetoothDevices.setSummary(R.string.settings_bluetooth_selected_bluetooth_devices_description);
             }
         }
+    }
+
+    protected void setWirelessPreferences(boolean usingRouter) {
+        PreferenceScreen preferenceScreen = getPreferenceScreen();
+        Preference headunitIpAddressPreference = Objects.requireNonNull(preferenceScreen.findPreference("settings_wireless_headunit_ip_address"));
+        Preference settingsWirelessRouterNotePreference = Objects.requireNonNull(preferenceScreen.findPreference("settings_wireless_router_note"));
+        Preference settingsWirelessWifiNameNotePreference = Objects.requireNonNull(preferenceScreen.findPreference("settings_wireless_wifi_name_note"));
+
+        headunitIpAddressPreference.setVisible(usingRouter);
+        settingsWirelessRouterNotePreference.setVisible(usingRouter);
+        settingsWirelessWifiNameNotePreference.setVisible(!usingRouter);
     }
 
     @Override

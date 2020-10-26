@@ -155,8 +155,8 @@ public class PermissionService {
         WifiManager wifiManager = (WifiManager) activity.getSystemService(Context.WIFI_SERVICE);
         WifiNetworkSuggestion wifiNetworkSuggestion = new WifiNetworkSuggestion
                 .Builder()
-                .setSsid(Objects.requireNonNull(sharedPreferences.getString("headunitWifiSsid", activity.getString(R.string.headunitWifiSsid_default_value))))
-                .setWpa2Passphrase(Objects.requireNonNull(sharedPreferences.getString("headunitWifiWpa2Passphrase", activity.getString(R.string.headunitWifiWpa2Passphrase_default_value))))
+                .setSsid(Objects.requireNonNull(sharedPreferences.getString("settings_wireless_headunit_wifi_ssid", activity.getString(R.string.settings_wireless_headunit_wifi_ssid_default_value))))
+                .setWpa2Passphrase(Objects.requireNonNull(sharedPreferences.getString("settings_wireless_headunit_wifi_wpa2_passphrase", activity.getString(R.string.settings_wireless_headunit_wifi_wpa2_passphrase_default_value))))
                 .build();
         ArrayList<WifiNetworkSuggestion> wifiSuggestionsList = new ArrayList<>();
         wifiSuggestionsList.add(wifiNetworkSuggestion);
