@@ -23,10 +23,12 @@
     <string name="settings_bluetooth_selected_bluetooth_devices_turn_on">Please turn on bluetooth</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_bt_off">Bluetooth was off, re open it again</string>
     <string name="settings_bluetooth_selected_bluetooth_devices_no_devices">No paired Bluetooth devices</string>
+    <string name="settings_bluetooth_selected_bluetooth_devices_forgotten_device">Forgotten device</string>
     <string name="settings_advanced_options_enable_force_connect_button_title">Add Force Connect button</string>
     <string name="settings_advanced_options_enable_force_connect_button_description">Adds a button in service notification to force connection to car display (needs service restart)</string>
     <string name="settings_advanced_options_start_service_manually_title">Start Wi-Fi service manually</string>
     <string name="settings_advanced_options_start_service_manually_description">This will start Wi-Fi service to connect Wireless Android Auto.</string>
+    <string name="settings_advanced_options_service_running_for_title">Service running for</string>
     <string name="settings_wireless_headunit_ssid_title">Car display Wi-Fi name</string>
     <string name="settings_wireless_headunit_wpa2_passphrase_title">Car display Wi-Fi password</string>
     <string name="settings_wireless_note">Note: Consider if your car display is rooted it can reset hotspot settings to default (HUR/AndroidAutoConnect) every time it starts. Password must be WPA2 Personal.</string>

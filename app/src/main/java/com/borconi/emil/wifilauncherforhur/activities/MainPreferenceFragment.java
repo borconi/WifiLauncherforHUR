@@ -46,6 +46,7 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         LinearLayout v = (LinearLayout) super.onCreateView(inflater, container, savedInstanceState);
 
@@ -180,10 +181,18 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
             return;
         }
         if (bluetoothDevices != null) {
-            if (bluetoothDevices.getValues() != null &&
-                    bluetoothDevices.getEntries() != null && bluetoothDevices.getValues().size() > 0) {
-                bluetoothDevices.setSummary(bluetoothDevices.getValues().stream()
-                        .map(v -> bluetoothDevices.getEntries()[bluetoothDevices.findIndexOfValue(v)]).collect(Collectors.joining(", ")));
+            Set<String> values = bluetoothDevices.getValues().stream()
+                    .filter(v -> !v.equalsIgnoreCase("")).collect(Collectors.toSet());
+
+            if (values.size() > 0) {
+                bluetoothDevices.setSummary(values.stream()
+                        .map(v -> {
+                            int indexOfValue = bluetoothDevices.findIndexOfValue(v);
+                            if (indexOfValue >= 0) {
+                                return bluetoothDevices.getEntries()[indexOfValue];
+                            }
+                            return getString(R.string.settings_bluetooth_selected_bluetooth_devices_forgotten_device);
+                        }).collect(Collectors.joining(", ")));
             } else {
                 bluetoothDevices.setSummary(R.string.settings_bluetooth_selected_bluetooth_devices_description);
             }
