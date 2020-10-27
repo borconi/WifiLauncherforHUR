@@ -35,7 +35,7 @@
     <string name="settings_wireless_headunit_wifi_using_router_title">Connects using a router</string>
     <string name="settings_wireless_headunit_wifi_using_router_description">Don\'t check it if you are using car display hotspot</string>
     <string name="settings_wireless_router_note">Note: Use a static/reserved IP in car display to avoid assigning a different IP address every time it connects to the Router (disable DHCP in car display or reserve the IP in the router). If you don\'t do this, it won\'t connect correctly.</string>
-    <string name="settings_wireless_wifi_name_note">Note: Consider Headunit Reloaded app it might reset hotspot settings to default (HUR/AndroidAutoConnect) every time it starts. Password must be WPA2 Personal.</string>
+    <string name="settings_wireless_wifi_name_note">Note: Consider Headunit Reloaded app might reset hotspot settings to default (HUR/AndroidAutoConnect) every time it starts. Password must be WPA2 Personal.</string>
     <string name="turn_on">Turn on</string>
     <string name="wireless">Wireless</string>
     <string name="bluetooth">Bluetooth</string>
