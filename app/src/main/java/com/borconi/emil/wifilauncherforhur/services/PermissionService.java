@@ -14,7 +14,6 @@ import android.provider.Settings;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
-import androidx.preference.PreferenceManager;
 
 import com.borconi.emil.wifilauncherforhur.R;
 import com.borconi.emil.wifilauncherforhur.utils.DeviceDetectionUtils;
@@ -38,7 +37,7 @@ public class PermissionService {
 
     public PermissionService(Activity activity) {
         this.activity = activity;
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity);
+        sharedPreferences = activity.getSharedPreferences("permissions_service_shared_prefs", Context.MODE_PRIVATE);
     }
 
     public boolean requestDrawOverlays(boolean showRationaleMessage) {

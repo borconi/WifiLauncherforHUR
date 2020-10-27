@@ -87,9 +87,9 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
                 if (!WifiService.isRunning()) {
                     WifiService.setIsConnected(false);
                     Context context = getContext();
-                    Intent WifiListenerIntent = new Intent(context, WifiService.class);
+                    Intent wifiServiceIntent = new Intent(context, WifiService.class);
                     if (context != null) {
-                        context.startForegroundService(WifiListenerIntent);
+                        context.startForegroundService(wifiServiceIntent);
                     }
                 }
                 return true;

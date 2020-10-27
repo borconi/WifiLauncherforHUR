@@ -53,4 +53,8 @@
     <string name="force_connect">Forzar conexión</string>
     <string name="status_all_permissions_granted">Genial! Todos los permisos están otorgados</string>
     <string name="status_denied_permissions">Oh no! Hay algunos permisos denegados, tocá acá para arreglarlo</string>
+    <string name="app_widget_paused">Pausado</string>
+    <string name="app_widget_running">Buscando</string>
+    <string name="app_widget_connected">Conectado</string>
+    <string name="add_widget">Agregar Wi-Fi Launcher widget</string>
 </resources>

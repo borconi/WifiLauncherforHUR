@@ -7,6 +7,8 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.app.UiModeManager;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -33,6 +35,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 
 import com.borconi.emil.wifilauncherforhur.R;
+import com.borconi.emil.wifilauncherforhur.WiFiLauncherServiceWidget;
 import com.borconi.emil.wifilauncherforhur.activities.EnableLocationActivity;
 import com.borconi.emil.wifilauncherforhur.activities.EnableWifiActivity;
 import com.borconi.emil.wifilauncherforhur.listeners.WifiServiceStatusChangedListener;
@@ -65,6 +68,7 @@ public class WifiService extends Service {
     private static boolean isRunning = false;
     private static boolean isConnected = false;
 
+    public static final String ACTION_FOREGROUND_STOP = "actionWifiServiceForegroundStop";
     public static boolean askingForLocation = false;
 
     private int serviceTimeoutInMinutes = 60 * 1000 * 2; // Default 2 minutes.
@@ -82,6 +86,8 @@ public class WifiService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        registerOnStatusChangedListenerUpdateWidget();
+
         setIsRunning(true);
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
@@ -355,6 +361,21 @@ public class WifiService extends Service {
         });
     }
 
+    protected void registerOnStatusChangedListenerUpdateWidget() {
+        addStatusChangedListener((isRunning, isConnected) -> {
+            int[] ids = AppWidgetManager.getInstance(getApplication())
+                .getAppWidgetIds(new ComponentName(getApplication(), WiFiLauncherServiceWidget.class));
+
+            if (ids.length > 0) {
+                Intent intent = new Intent(this, WiFiLauncherServiceWidget.class);
+                intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+                intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
+
+                sendBroadcast(intent);
+            }
+        });
+    }
+
     private void removeTryToConnectCallback() {
         handler.removeCallbacks(TryToConnectRunnable);
     }
@@ -437,8 +458,14 @@ public class WifiService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("WifiService", "Start service");
-        super.onStartCommand(intent, flags, startId);
+        if (ACTION_FOREGROUND_STOP.equals(intent.getAction())) {
+            Log.d("WifiService", "Stop service");
+            stopForeground(true);
+            stopSelf();
+        } else {
+            Log.d("WifiService", "Start service");
+            super.onStartCommand(intent, flags, startId);
+        }
         return START_STICKY;
     }
 

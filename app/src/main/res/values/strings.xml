@@ -52,4 +52,8 @@
     <string name="force_connect">Force connect</string>
     <string name="status_all_permissions_granted">Great! All permissions are granted</string>
     <string name="status_denied_permissions">Oh no! There are permissions denied, tap here to fix it</string>
+    <string name="app_widget_paused">Paused</string>
+    <string name="app_widget_running">Running</string>
+    <string name="app_widget_connected">Connected</string>
+    <string name="add_widget">Add Wi-Fi Launcher widget</string>
 </resources>

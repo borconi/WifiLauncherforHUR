@@ -1,0 +1,33 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/appwidget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingTop="@dimen/widget_margin">
+
+    <ImageView
+        android:id="@+id/appwidget_icon"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:src="@mipmap/ic_widget_preview_round"
+        android:paddingStart="3dp"
+        android:paddingEnd="3dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/app_name" />
+
+    <TextView
+        android:id="@+id/appwidget_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/appwidget_icon"
+        android:paddingTop="6dp"
+        android:contentDescription="@string/app_widget_paused"
+        android:text="@string/app_widget_paused"
+        android:textColor="@color/white"
+        android:shadowColor="@color/black"
+        android:shadowDy="2"
+        android:shadowDx="2"
+        android:shadowRadius="2"
+        android:textAlignment="center"
+        android:textSize="12sp" />
+
+</RelativeLayout>
