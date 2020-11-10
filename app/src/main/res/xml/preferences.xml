@@ -57,28 +57,55 @@
         <EditTextPreference
             app:iconSpaceReserved="true"
             android:enabled="true"
-            android:key="headunitWifiSsid"
+            android:key="settings_wireless_headunit_wifi_ssid"
             android:persistent="true"
-            android:defaultValue="@string/headunitWifiSsid_default_value"
+            android:defaultValue="@string/settings_wireless_headunit_wifi_ssid_default_value"
             android:title="@string/settings_wireless_headunit_ssid_title"
             app:useSimpleSummaryProvider="true"/>
 
         <EditTextPreference
             app:iconSpaceReserved="true"
             android:enabled="true"
-            android:key="headunitWifiWpa2Passphrase"
+            android:key="settings_wireless_headunit_wifi_wpa2_passphrase"
             android:persistent="true"
-            android:defaultValue="@string/headunitWifiWpa2Passphrase_default_value"
+            android:defaultValue="@string/settings_wireless_headunit_wifi_wpa2_passphrase_default_value"
             android:title="@string/settings_wireless_headunit_wpa2_passphrase_title"
             app:useSimpleSummaryProvider="true"/>
+
+        <SwitchPreference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="settings_wireless_headunit_wifi_using_router"
+            android:persistent="true"
+            android:title="@string/settings_wireless_headunit_wifi_using_router_title"
+            android:summary="@string/settings_wireless_headunit_wifi_using_router_description" />
+
+        <EditTextPreference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="settings_wireless_headunit_ip_address"
+            android:persistent="true"
+            android:defaultValue=""
+            android:title="@string/settings_wireless_headunit_ip_address_title"
+            app:isPreferenceVisible="false"
+            app:useSimpleSummaryProvider="true" />
 
         <Preference
             app:iconSpaceReserved="true"
             android:enabled="true"
-            android:key="settings_wireless_note"
+            android:key="settings_wireless_wifi_name_note"
             android:persistent="false"
             app:enabled="false"
-            android:summary="@string/settings_wireless_note"/>
+            android:summary="@string/settings_wireless_wifi_name_note"/>
+
+        <Preference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="settings_wireless_router_note"
+            android:persistent="false"
+            app:isPreferenceVisible="false"
+            app:enabled="false"
+            android:summary="@string/settings_wireless_router_note"/>
 
     </PreferenceCategory>
 

@@ -7,6 +7,8 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.app.UiModeManager;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -33,6 +35,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 
 import com.borconi.emil.wifilauncherforhur.R;
+import com.borconi.emil.wifilauncherforhur.WiFiLauncherServiceWidget;
 import com.borconi.emil.wifilauncherforhur.activities.EnableLocationActivity;
 import com.borconi.emil.wifilauncherforhur.activities.EnableWifiActivity;
 import com.borconi.emil.wifilauncherforhur.listeners.WifiServiceStatusChangedListener;
@@ -65,6 +68,7 @@ public class WifiService extends Service {
     private static boolean isRunning = false;
     private static boolean isConnected = false;
 
+    public static final String ACTION_FOREGROUND_STOP = "actionWifiServiceForegroundStop";
     public static boolean askingForLocation = false;
 
     private int serviceTimeoutInMinutes = 60 * 1000 * 2; // Default 2 minutes.
@@ -75,11 +79,15 @@ public class WifiService extends Service {
     private final Handler handler = new Handler();
     private String headunitWifiSsid;
     private String headunitWifiWpa2Passphrase;
+    private String headunitWifiIpAddress;
+    private Boolean headunitWifiUsingRouter;
     private Integer networkId;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        registerOnStatusChangedListenerUpdateWidget();
+
         setIsRunning(true);
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
@@ -144,13 +152,18 @@ public class WifiService extends Service {
         }
 
         // If Wi-Fi is in connected state, we will send AAWireless intent to HUR.
-        if (getCleanSsid(wifiManager.getConnectionInfo().getSSID()).equalsIgnoreCase(headunitWifiSsid) &&
+        if (getSanitizedSsid(wifiManager.getConnectionInfo().getSSID()).equalsIgnoreCase(headunitWifiSsid) &&
                 wifiManager.getConnectionInfo().getSupplicantState() == SupplicantState.COMPLETED) {
 
-            String gatewayAddress = IpUtils.IntToIp(wifiManager.getDhcpInfo().gateway);
-            if (!gatewayAddress.equalsIgnoreCase("0.0.0.0")) {
-                HurConnection.connect(this, gatewayAddress);
-                Log.d("WifiService", "Sending Intent to HUR! > gatewayAddress: " + gatewayAddress);
+            if (isUsingRouter()) {
+                HurConnection.connect(this, headunitWifiIpAddress);
+                Log.d("WifiService", "Sending Intent to ROUTER! > IP: " + headunitWifiIpAddress);
+            } else { // Default connection, will hit gateway IP address because hotspot is car display
+                String gatewayAddress = IpUtils.IntToIp(wifiManager.getDhcpInfo().gateway);
+                if (!gatewayAddress.equalsIgnoreCase("0.0.0.0")) {
+                    HurConnection.connect(this, gatewayAddress);
+                    Log.d("WifiService", "Sending Intent to HUR! > gatewayAddress: " + gatewayAddress);
+                }
             }
         }
     }
@@ -203,7 +216,7 @@ public class WifiService extends Service {
 
             configuredWiFis.stream()
                     // Removes " from beginning and ending of string
-                    .filter(w -> getCleanSsid(w.SSID).equalsIgnoreCase(headunitWifiSsid))
+                    .filter(w -> getSanitizedSsid(w.SSID).equalsIgnoreCase(headunitWifiSsid))
                     .findFirst()
                     .ifPresent(w -> networkId = w.networkId);
 
@@ -310,18 +323,28 @@ public class WifiService extends Service {
             serviceTimeoutInMinutes = Integer.parseInt(serviceRunningFor) * 60 * 1000;
         }
 
-        headunitWifiSsid = sharedPreferences.getString("headunitWifiSsid", getString(R.string.headunitWifiSsid_default_value));
-        headunitWifiWpa2Passphrase = sharedPreferences.getString("headunitWifiWpa2Passphrase", getString(R.string.headunitWifiWpa2Passphrase_default_value));
+        headunitWifiSsid = sharedPreferences.getString("settings_wireless_headunit_wifi_ssid", getString(R.string.settings_wireless_headunit_wifi_ssid_default_value));
+        headunitWifiWpa2Passphrase = sharedPreferences.getString("settings_wireless_headunit_wifi_wpa2_passphrase", getString(R.string.settings_wireless_headunit_wifi_wpa2_passphrase_default_value));
+        headunitWifiIpAddress = sharedPreferences.getString("settings_wireless_headunit_ip_address", getString(R.string.settings_wireless_headunit_ip_address_default_value));
+        headunitWifiUsingRouter = sharedPreferences.getBoolean("settings_wireless_headunit_wifi_using_router", Boolean.parseBoolean(getString(R.string.settings_wireless_headunit_wifi_using_router_default_value)));
     }
 
     protected void registerOnSharedPreferenceChangeListener() {
         PreferenceManager.getDefaultSharedPreferences(this)
                 .registerOnSharedPreferenceChangeListener((prefs, key) -> {
                     switch (key) {
-                        case "headunitWifiSsid":
-                            headunitWifiSsid = prefs.getString(key, getString(R.string.headunitWifiSsid_default_value));
-                        case "headunitWifiWpa2Passphrase":
-                            headunitWifiWpa2Passphrase = prefs.getString(key, getString(R.string.headunitWifiWpa2Passphrase_default_value));
+                        case "settings_wireless_headunit_wifi_ssid":
+                            headunitWifiSsid = prefs.getString(key, getString(R.string.settings_wireless_headunit_wifi_ssid_default_value));
+                            break;
+                        case "settings_wireless_headunit_wifi_wpa2_passphrase":
+                            headunitWifiWpa2Passphrase = prefs.getString(key, getString(R.string.settings_wireless_headunit_wifi_wpa2_passphrase_default_value));
+                            break;
+                        case "settings_wireless_headunit_ip_address":
+                            headunitWifiIpAddress = prefs.getString(key, getString(R.string.settings_wireless_headunit_ip_address_default_value));
+                            break;
+                        case "settings_wireless_headunit_wifi_using_router":
+                            headunitWifiUsingRouter = prefs.getBoolean(key, Boolean.parseBoolean(getString(R.string.settings_wireless_headunit_wifi_using_router_default_value)));
+                            break;
                     }
                 });
     }
@@ -334,6 +357,21 @@ public class WifiService extends Service {
                 registerOnLostNetworkCallback();
                 removeTryToConnectCallback();
                 removeAllUserNotifications();
+            }
+        });
+    }
+
+    protected void registerOnStatusChangedListenerUpdateWidget() {
+        addStatusChangedListener((isRunning, isConnected) -> {
+            int[] ids = AppWidgetManager.getInstance(getApplication())
+                .getAppWidgetIds(new ComponentName(getApplication(), WiFiLauncherServiceWidget.class));
+
+            if (ids.length > 0) {
+                Intent intent = new Intent(this, WiFiLauncherServiceWidget.class);
+                intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+                intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
+
+                sendBroadcast(intent);
             }
         });
     }
@@ -420,8 +458,14 @@ public class WifiService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("WifiService", "Start service");
-        super.onStartCommand(intent, flags, startId);
+        if (ACTION_FOREGROUND_STOP.equals(intent.getAction())) {
+            Log.d("WifiService", "Stop service");
+            stopForeground(true);
+            stopSelf();
+        } else {
+            Log.d("WifiService", "Start service");
+            super.onStartCommand(intent, flags, startId);
+        }
         return START_STICKY;
     }
 
@@ -471,8 +515,12 @@ public class WifiService extends Service {
         }
     }
 
-    private String getCleanSsid(String value) {
+    private String getSanitizedSsid(String value) {
         return value.replaceAll("^\"|\"$", STRING_EMPTY);
+    }
+
+    private Boolean isUsingRouter() {
+        return headunitWifiUsingRouter;
     }
 
     @Nullable

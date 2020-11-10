@@ -14,7 +14,6 @@ import android.provider.Settings;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
-import androidx.preference.PreferenceManager;
 
 import com.borconi.emil.wifilauncherforhur.R;
 import com.borconi.emil.wifilauncherforhur.utils.DeviceDetectionUtils;
@@ -38,7 +37,7 @@ public class PermissionService {
 
     public PermissionService(Activity activity) {
         this.activity = activity;
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(activity);
+        sharedPreferences = activity.getSharedPreferences("permissions_service_shared_prefs", Context.MODE_PRIVATE);
     }
 
     public boolean requestDrawOverlays(boolean showRationaleMessage) {
@@ -155,8 +154,8 @@ public class PermissionService {
         WifiManager wifiManager = (WifiManager) activity.getSystemService(Context.WIFI_SERVICE);
         WifiNetworkSuggestion wifiNetworkSuggestion = new WifiNetworkSuggestion
                 .Builder()
-                .setSsid(Objects.requireNonNull(sharedPreferences.getString("headunitWifiSsid", activity.getString(R.string.headunitWifiSsid_default_value))))
-                .setWpa2Passphrase(Objects.requireNonNull(sharedPreferences.getString("headunitWifiWpa2Passphrase", activity.getString(R.string.headunitWifiWpa2Passphrase_default_value))))
+                .setSsid(Objects.requireNonNull(sharedPreferences.getString("settings_wireless_headunit_wifi_ssid", activity.getString(R.string.settings_wireless_headunit_wifi_ssid_default_value))))
+                .setWpa2Passphrase(Objects.requireNonNull(sharedPreferences.getString("settings_wireless_headunit_wifi_wpa2_passphrase", activity.getString(R.string.settings_wireless_headunit_wifi_wpa2_passphrase_default_value))))
                 .build();
         ArrayList<WifiNetworkSuggestion> wifiSuggestionsList = new ArrayList<>();
         wifiSuggestionsList.add(wifiNetworkSuggestion);

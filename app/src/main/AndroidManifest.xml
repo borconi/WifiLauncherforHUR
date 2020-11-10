@@ -5,8 +5,12 @@
 
     <dist:module dist:instant="true" />
 
-    <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
-    <uses-feature android:name="android.hardware.wifi" android:required="true" />
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.wifi"
+        android:required="true" />
 
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -17,23 +21,23 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
+        android:allowBackup="true"
+        android:fullBackupContent="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme.WiFiLauncher"
-        android:fullBackupContent="true"
-        android:allowBackup="true">
+        android:theme="@style/AppTheme.WiFiLauncher">
 
         <activity
             android:name=".activities.MainActivity"
-            android:theme="@style/SplashTheme"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:theme="@style/SplashTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -43,17 +47,18 @@
 
         <activity
             android:name=".activities.EnableWifiActivity"
-            android:screenOrientation="sensorPortrait"
             android:excludeFromRecents="true"
-            android:noHistory="true"/>
+            android:noHistory="true"
+            android:screenOrientation="sensorPortrait" />
 
         <activity
             android:name=".activities.EnableLocationActivity"
-            android:screenOrientation="sensorPortrait"
             android:excludeFromRecents="true"
-            android:noHistory="true"/>
+            android:noHistory="true"
+            android:screenOrientation="sensorPortrait" />
 
-        <service android:name=".services.WifiService"
+        <service
+            android:name=".services.WifiService"
             android:foregroundServiceType="mediaProjection" />
 
         <receiver
@@ -74,6 +79,15 @@
                 <action android:name="com.borconi.emil.wifilauncherforhur.action.FORCE_CONNECT" />
             </intent-filter>
         </receiver>
-    </application>
 
+        <receiver android:name=".WiFiLauncherServiceWidget">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_wi_fi_launcher_service_info" />
+        </receiver>
+    </application>
 </manifest>

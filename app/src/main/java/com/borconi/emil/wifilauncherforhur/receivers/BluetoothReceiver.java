@@ -83,7 +83,7 @@ public class BluetoothReceiver extends BroadcastReceiver {
 
                         // Try to disconnect wifi
                         WifiManager wifi = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-                        if (wifi != null && wifi.getConnectionInfo().getSSID().contains(Objects.requireNonNull(sharedPreferences.getString("headunitWifiSsid", context.getString(R.string.headunitWifiSsid_default_value)))))
+                        if (wifi != null && wifi.getConnectionInfo().getSSID().contains(Objects.requireNonNull(sharedPreferences.getString("settings_wireless_headunit_wifi_ssid", context.getString(R.string.settings_wireless_headunit_wifi_ssid_default_value)))))
                             wifi.disconnect();
                     }
                     break;
