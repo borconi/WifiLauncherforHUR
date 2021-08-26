@@ -182,6 +182,12 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         if (adapter != null && adapter.getBondedDevices().size() > 0) {
             entries = adapter.getBondedDevices().stream().map(BluetoothDevice::getName).toArray(String[]::new);
             entryValues = adapter.getBondedDevices().stream().map(BluetoothDevice::getAddress).toArray(String[]::new);
+            for (int i=0; i<entries.length; i++) {
+                if (entries[i] == null) {
+                    // Workaround for bluetooth devices without name
+                    entries[i] = entryValues[i];
+                }
+            }
         }
 
         preference.setEntries(entries);
