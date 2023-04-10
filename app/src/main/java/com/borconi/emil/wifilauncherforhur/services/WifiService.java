@@ -1,264 +1,253 @@
 package com.borconi.emil.wifilauncherforhur.services;
 
-import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.app.UiModeManager;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
-import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
-import android.net.wifi.SupplicantState;
-import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiManager;
-import android.net.wifi.WifiNetworkSuggestion;
+import android.net.NetworkInfo;
+import android.net.nsd.NsdManager;
+import android.net.nsd.NsdServiceInfo;
+import android.net.wifi.WifiInfo;
 import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.RemoteViews;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
 
 import com.borconi.emil.wifilauncherforhur.R;
 import com.borconi.emil.wifilauncherforhur.WiFiLauncherServiceWidget;
-import com.borconi.emil.wifilauncherforhur.activities.EnableLocationActivity;
-import com.borconi.emil.wifilauncherforhur.activities.EnableWifiActivity;
-import com.borconi.emil.wifilauncherforhur.listeners.WifiServiceStatusChangedListener;
-import com.borconi.emil.wifilauncherforhur.receivers.CarModeReceiver;
 import com.borconi.emil.wifilauncherforhur.receivers.WifiReceiver;
-import com.borconi.emil.wifilauncherforhur.receivers.WifiLocalReceiver;
-import com.borconi.emil.wifilauncherforhur.utils.HurConnection;
-import com.borconi.emil.wifilauncherforhur.utils.IpUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import static android.net.wifi.WifiManager.NETWORK_STATE_CHANGED_ACTION;
+import static androidx.core.app.NotificationCompat.EXTRA_NOTIFICATION_ID;
 import static androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC;
-import static com.borconi.emil.wifilauncherforhur.receivers.CarModeReceiver.ACTION_ENTER_CAR_MODE;
-import static com.borconi.emil.wifilauncherforhur.receivers.CarModeReceiver.ACTION_EXIT_CAR_MODE;
-import static com.borconi.emil.wifilauncherforhur.receivers.WifiLocalReceiver.ACTION_WIFI_LAUNCHER_EXIT;
-import static com.borconi.emil.wifilauncherforhur.receivers.WifiLocalReceiver.ACTION_WIFI_LAUNCHER_FORCE_CONNECT;
+import static com.borconi.emil.wifilauncherforhur.WiFiLauncherServiceWidget.WIDGET_ACTION;
+import static com.borconi.emil.wifilauncherforhur.receivers.WifiReceiver.ACTION_WIFI_LAUNCHER_EXIT;
+import static com.borconi.emil.wifilauncherforhur.tethering.MyTether.startTether;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.util.Random;
 
 public class WifiService extends Service {
-    private static final int FIVE_SECONDS = 5000;
-    private static final String STRING_EMPTY = "";
-    private static final String WIFI_STRING_FORMAT = "\"%s\"";
+
     private static final int NOTIFICATION_ID = 1035;
     private static final int TURN_OFF_REQUEST_CODE = 1040;
-    private static final int FORCE_CONNECT_REQUEST_CODE = 1050;
-    private static final String NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID = "wifilauncher_notification_channel_no_vibration_default";
+     private static final String NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID = "wifilauncher_notification_channel_no_vibration_default";
     private static final String NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID = "wifilauncher_notification_channel_with_vibration_high";
-    private static final List<WifiServiceStatusChangedListener> listeners = new ArrayList<>();
+
     private static boolean isRunning = false;
-    private static boolean isConnected = false;
 
     public static final String ACTION_FOREGROUND_STOP = "actionWifiServiceForegroundStop";
-    public static boolean askingForLocation = false;
 
-    private int serviceTimeoutInMinutes = 60 * 1000 * 2; // Default 2 minutes.
-    private ConnectivityManager.NetworkCallback networkCallback;
-    private CarModeReceiver carModeReceiver;
-    private WifiLocalReceiver wifiLocalReceiver;
+
     private NotificationManager notificationManager;
-    private final Handler handler = new Handler();
-    private String headunitWifiSsid;
-    private String headunitWifiWpa2Passphrase;
-    private String headunitWifiIpAddress;
-    private Boolean headunitWifiUsingRouter;
-    private Integer networkId;
+    private static final String TAG = "NetworkServiceDiscovery";
+    private static final String SERVICE_TYPE = "_aawireless._tcp.";
+    private NsdManager mNsdManager;
+    private NsdManager.DiscoveryListener mDiscoveryListener;
+    private static final String PACKAGE_NAME_ANDROID_AUTO_WIRELESS = "com.google.android.projection.gearhead";
+    private static final String CLASS_NAME_ANDROID_AUTO_WIRELESS = "com.google.android.apps.auto.wireless.setup.service.impl.WirelessStartupActivity";
+
+    private static final String PARAM_HOST_ADDRESS_EXTRA_NAME = "PARAM_HOST_ADDRESS";
+    private static final String PARAM_SERVICE_PORT_EXTRA_NAME = "PARAM_SERVICE_PORT";
+    private String hostIpAddress;
+    private PendingIntent pendingIntent;
+    private NotificationCompat.Builder notification;
+
+    public static boolean isRunning() {
+        return isRunning;
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        registerOnStatusChangedListenerUpdateWidget();
-
-        setIsRunning(true);
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-        setSharedPreferencesValues();
-        registerOnSharedPreferenceChangeListener();
-
-        registerReceivers();
-
+        mNsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
         verifyOrCreateNotificationChannels();
-        Notification notification = getNotification(this, getString(R.string.service_wifi_looking_text));
-        startForeground(NOTIFICATION_ID, notification);
-
-        registerOnStatusChangedListenerUpdateNotification();
-
-        // Tries to connect to HUR for the first time
-        tryToConnect();
-
-        // We will try to connect for 2 minutes, otherwise we will stop this service.
-        Log.d("WifiService", String.format("STOPPING SERVICE IN %s mins", serviceTimeoutInMinutes));
-        handler.postDelayed(StopServiceRunnable, serviceTimeoutInMinutes);
+        notification = getNotification(this, getString(R.string.service_wifi_looking_text));
+        startForeground(NOTIFICATION_ID, notification.build());
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router",false))
+            startTether(this, true);
+        initializeDiscoveryListener();
+        mNsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
+        isRunning=true;
     }
 
-    public void tryToConnect() {
-        tryToConnect(false);
-    }
 
-    public void tryToConnect(boolean forceConnect) {
-        registerTryToConnectCallback();
 
-        // If Wi-Fi is off we won't be able to connect to car display
-        if (!verifyOrEnableWifi()) {
-            return;
-        }
 
-        // If Location Services are off we won't be able to look for desired Wi-Fi SSID.
-        // More info: https://developer.android.com/reference/android/net/wifi/WifiManager#getConnectionInfo()
-        // We will get "UNKNOWN_SSID" and no networkId at all.
-        if (!verifyOrEnableLocation()) {
-            return;
-        }
+    private void initializeDiscoveryListener() {
+        mDiscoveryListener = new NsdManager.DiscoveryListener() {
 
-        verifyOrAddHurHotspot();
-
-        // If force connect button was pressed, we are not going to check if we are connected
-        // we will try to send at least one intent to HUR
-        if (!forceConnect) {
-            checkIfIsInCarMode();
-
-            if (isConnected) {
-                return;
+            @Override
+            public void onDiscoveryStarted(String regType) {
+                Log.d(TAG, "Service discovery started");
             }
-        }
 
-        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        // If connected Wi-Fi is diff than desired, we will disconnect and try to reconnect.
-        if (wifiManager.getConnectionInfo().getNetworkId() != networkId) {
-            Log.d("WifiService", "Start up, not connected to HUR network, is it in range?");
+            @Override
+            public void onServiceFound(NsdServiceInfo service) {
+                Log.d(TAG, "Service found: " + service);
+                mNsdManager.resolveService(service, new NsdManager.ResolveListener() {
+                    @Override
+                    public void onServiceResolved(NsdServiceInfo serviceInfo) {
 
-            wifiManager.disconnect();
-            wifiManager.enableNetwork(networkId, true);
-            wifiManager.reconnect();
-        }
+                        Log.d(TAG, "Service resolved: " + serviceInfo);
+                        hostIpAddress = serviceInfo.getHost().getHostAddress();
+                        Log.d(TAG, "Host IP address: " + hostIpAddress);
+                        Random r = new Random();
+                        websockport = r.nextInt(9998 - 8081) + 8081;
 
-        // If Wi-Fi is in connected state, we will send AAWireless intent to HUR.
-        if (getSanitizedSsid(wifiManager.getConnectionInfo().getSSID()).equalsIgnoreCase(headunitWifiSsid) &&
-                wifiManager.getConnectionInfo().getSupplicantState() == SupplicantState.COMPLETED) {
+                        notification.setContentText(getString(R.string.connectedtocar));
+                        notificationManager.notify(NOTIFICATION_ID, notification.build());
 
-            if (isUsingRouter()) {
-                HurConnection.connect(this, headunitWifiIpAddress);
-                Log.d("WifiService", "Sending Intent to ROUTER! > IP: " + headunitWifiIpAddress);
-            } else { // Default connection, will hit gateway IP address because hotspot is car display
-                String gatewayAddress = IpUtils.IntToIp(wifiManager.getDhcpInfo().gateway);
-                if (!gatewayAddress.equalsIgnoreCase("0.0.0.0")) {
-                    HurConnection.connect(this, gatewayAddress);
-                    Log.d("WifiService", "Sending Intent to HUR! > gatewayAddress: " + gatewayAddress);
+                        ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                        Network ns = connectivity.getActiveNetwork();
+
+
+                        Intent androidAutoWirelessIntent = new Intent();
+                        WifiInfo wifiinfo = null;
+                        try {
+                            Class<?> cl = Class.forName("android.net.wifi.WifiInfo");
+                            wifiinfo = (WifiInfo) cl.newInstance();
+                        }
+                        catch (Exception e){e.printStackTrace();}
+
+
+                        androidAutoWirelessIntent.setClassName(PACKAGE_NAME_ANDROID_AUTO_WIRELESS, CLASS_NAME_ANDROID_AUTO_WIRELESS);
+                        androidAutoWirelessIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        androidAutoWirelessIntent
+                                .putExtra(PARAM_HOST_ADDRESS_EXTRA_NAME, "127.0.0.1")
+                                .putExtra(PARAM_SERVICE_PORT_EXTRA_NAME, websockport)
+                                .putExtra("wifi_info",wifiinfo)
+                                .putExtra("PARAM_SERVICE_WIFI_NETWORK", ns);
+                        try {
+                            phoneToHur.start();
+                            hurToPhone.start();
+                            mNsdManager.stopServiceDiscovery(mDiscoveryListener);
+                            startActivity(androidAutoWirelessIntent);
+
+                        }
+                        catch (Exception e)
+                        {
+                            e.printStackTrace();
+                        }
+
+                    }
+
+                    @Override
+                    public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode) {
+                        Log.e(TAG, "Resolve failed: " + errorCode);
+                    }
+                });
+            }
+
+            @Override
+            public void onServiceLost(NsdServiceInfo service) {
+                Log.e(TAG, "Service lost: " + service);
+            }
+
+            @Override
+            public void onDiscoveryStopped(String serviceType) {
+                Log.i(TAG, "Discovery stopped: " + serviceType);
+            }
+
+            @Override
+            public void onStartDiscoveryFailed(String serviceType, int errorCode) {
+                Log.e(TAG, "Discovery failed: Error code: " + errorCode);
+                mNsdManager.stopServiceDiscovery(this);
+            }
+
+            @Override
+            public void onStopDiscoveryFailed(String serviceType, int errorCode) {
+                Log.e(TAG, "Discovery failed: Error code: " + errorCode);
+                mNsdManager.stopServiceDiscovery(this);
+            }
+        };
+    }
+
+
+    private OutputStream phonetohuroutput,hurtophoneoutput;
+    private InputStream phonetohurinput,hurtophoneinput;
+    private Socket localsocket,remotesocket;
+    private int websockport;
+    private final Thread phoneToHur = new Thread(new Runnable() {
+        @Override
+        public void run() {
+
+            try {
+                ServerSocket serverSocket = new ServerSocket();
+                serverSocket.setReuseAddress(true);
+                serverSocket.bind(new InetSocketAddress(websockport));
+                localsocket=serverSocket.accept();
+                phonetohuroutput=localsocket.getOutputStream();
+                phonetohurinput=localsocket.getInputStream();
+                byte[] localbuffer=new byte[16384];
+                int got;
+                while (isRunning)
+                {
+                    while (remotesocket==null)
+                    {
+                        Thread.sleep(100);
+                    }
+                    got=phonetohurinput.read(localbuffer);
+                    hurtophoneoutput.write(localbuffer,0,got);
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
+                stopSelf();
             }
+
+
         }
-    }
+    });
 
-    protected boolean verifyOrEnableWifi() {
-        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 
-        if (!wifiManager.isWifiEnabled()) {
-            // Since Android 10 we can't turn on/off wifi programmatically
-            // https://developer.android.com/reference/android/net/wifi/WifiManager#setWifiEnabled(boolean)
-            // follow this post if Google enables it again: https://issuetracker.google.com/issues/128554616
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Let's send a message to the user to turn it on.
-                notificationManager.notify(EnableWifiActivity.WIFI_NOTIFICATION_ID,
-                        EnableWifiActivity.getNotification(this, NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID));
-                return false;
-            } else { // Android Pie can turn on Wi-Fi
-                wifiManager.setWifiEnabled(true);
-            }
-        }
-        return true;
-    }
-
-    protected boolean verifyOrEnableLocation() {
-        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
-        if (!locationManager.isLocationEnabled()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                notificationManager.notify(EnableLocationActivity.LOCATION_NOTIFICATION_ID,
-                        EnableLocationActivity.getNotification(this, NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID));
-            } else if (!askingForLocation) {
-                askingForLocation = true;
-                // Let's send a message to the user to turn it on.
-                Intent enableLocationActivityIntent = new Intent(this, EnableLocationActivity.class);
-                enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                enableLocationActivityIntent.addFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                startActivity(enableLocationActivityIntent);
-            }
-            return false;
-        }
-        return true;
-    }
-
-    protected void verifyOrAddHurHotspot() {
-        if (networkId == null) {
-            WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-
-            @SuppressLint("MissingPermission")
-            List<WifiConfiguration> configuredWiFis = wifiManager.getConfiguredNetworks();
-
-            configuredWiFis.stream()
-                    // Removes " from beginning and ending of string
-                    .filter(w -> getSanitizedSsid(w.SSID).equalsIgnoreCase(headunitWifiSsid))
-                    .findFirst()
-                    .ifPresent(w -> networkId = w.networkId);
-
-            if (networkId == null) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    WifiNetworkSuggestion wifiNetworkSuggestion = new WifiNetworkSuggestion
-                            .Builder()
-                            .setSsid(headunitWifiSsid)
-                            .setWpa2Passphrase(headunitWifiWpa2Passphrase)
-                            .build();
-                    ArrayList<WifiNetworkSuggestion> wifiSuggestionsList = new ArrayList<>();
-                    wifiSuggestionsList.add(wifiNetworkSuggestion);
-                    wifiManager.addNetworkSuggestions(wifiSuggestionsList);
+    private final Thread hurToPhone = new Thread(new Runnable() {
+        @Override
+        public void run() {
+            try {
+                remotesocket=new Socket(hostIpAddress,5288);
+                hurtophoneoutput=remotesocket.getOutputStream();
+                hurtophoneinput=remotesocket.getInputStream();
+                byte[] remotebuffer=new byte[16384];
+                int got;
+                while (isRunning)
+                {
+                    while (localsocket==null)
+                    {
+                        Thread.sleep(100);
+                    }
+                    got=hurtophoneinput.read(remotebuffer);
+                    phonetohuroutput.write(remotebuffer,0,got);
                 }
-
-                Log.d("WifiService", "HUR wifi not in the list, add it and try to connect");
-                WifiConfiguration wifiConfig = new WifiConfiguration();
-                wifiConfig.SSID = String.format(WIFI_STRING_FORMAT, headunitWifiSsid);
-                wifiConfig.preSharedKey = String.format(WIFI_STRING_FORMAT, headunitWifiWpa2Passphrase);
-                networkId = wifiManager.addNetwork(wifiConfig);
+            } catch (Exception e) {
+                e.printStackTrace();
+                stopSelf();
             }
         }
-    }
+    });
 
-    protected void registerReceivers() {
-        // This needs to be explicit registered in order to work
-        // https://developer.android.com/reference/android/app/UiModeManager.html#ACTION_ENTER_CAR_MODE
-        final IntentFilter intentFilterCarModeReceiver = new IntentFilter();
-        intentFilterCarModeReceiver.addAction(ACTION_EXIT_CAR_MODE);
-        intentFilterCarModeReceiver.addAction(ACTION_ENTER_CAR_MODE);
-        intentFilterCarModeReceiver.addAction(NETWORK_STATE_CHANGED_ACTION);
-        carModeReceiver = new CarModeReceiver();
-        registerReceiver(carModeReceiver, intentFilterCarModeReceiver);
 
-        // Start WifiReceiverLocal
-        final IntentFilter intentFilterWifiReceiverLocal = new IntentFilter();
-        intentFilterWifiReceiverLocal.addAction(NETWORK_STATE_CHANGED_ACTION);
-        intentFilterWifiReceiverLocal.addAction(ACTION_WIFI_LAUNCHER_EXIT);
-        intentFilterWifiReceiverLocal.addAction(ACTION_WIFI_LAUNCHER_FORCE_CONNECT);
-        wifiLocalReceiver = new WifiLocalReceiver(this);
-        LocalBroadcastManager.getInstance(this).registerReceiver(wifiLocalReceiver, intentFilterWifiReceiverLocal);
-    }
+
+
 
     protected void verifyOrCreateNotificationChannels() {
         NotificationChannel notificationChannelNoVibrationDefault = notificationManager.getNotificationChannel(NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID);
@@ -281,179 +270,57 @@ public class WifiService extends Service {
         }
     }
 
-    protected Notification getNotification(Context context, String contentText) {
+    protected NotificationCompat.Builder getNotification(Context context, String contentText) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID)
                 .setContentTitle(getString(R.string.service_wifi_title))
                 .setContentText(contentText)
+                .setAutoCancel(false)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
                 .setSmallIcon(R.drawable.ic_aa_wifi_notification)
                 .setTicker(getString(R.string.service_wifi_ticker));
 
         Intent turnOffIntent = new Intent(context, WifiReceiver.class);
         turnOffIntent.setAction(ACTION_WIFI_LAUNCHER_EXIT);
+        turnOffIntent.putExtra(EXTRA_NOTIFICATION_ID,0);
 
-        PendingIntent turnOffPendingIntent =
-                PendingIntent.getBroadcast(context, TURN_OFF_REQUEST_CODE, turnOffIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            pendingIntent = PendingIntent.getBroadcast(this, 0, turnOffIntent,  PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);
+        else
+            pendingIntent =
+                    PendingIntent.getBroadcast(this, 0, turnOffIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
 
         builder.addAction(
                 new NotificationCompat.Action.Builder(R.drawable.ic_power_settings_new_24,
                         getString(R.string.turn_off),
-                        turnOffPendingIntent).build());
+                        pendingIntent).build());
 
-        if (PreferenceManager.getDefaultSharedPreferences(context).getBoolean("enableForceConnectButton", false)) {
-            Intent forceConnectIntent = new Intent(context, WifiReceiver.class);
-            forceConnectIntent.setAction(ACTION_WIFI_LAUNCHER_FORCE_CONNECT);
 
-            PendingIntent forceConnectPendingIntent =
-                    PendingIntent.getBroadcast(context, FORCE_CONNECT_REQUEST_CODE, forceConnectIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-            builder.addAction(
-                    new NotificationCompat.Action.Builder(R.drawable.ic_sync_24,
-                            getString(R.string.force_connect),
-                            forceConnectPendingIntent).build());
-        }
-
-        return builder.build();
+        return builder;
     }
 
-    protected void setSharedPreferencesValues() {
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
-        String serviceRunningFor = sharedPreferences.getString("service_running_for", getString(R.string.service_running_for_default_value));
-        if (serviceRunningFor != null) {
-            serviceTimeoutInMinutes = Integer.parseInt(serviceRunningFor) * 60 * 1000;
-        }
 
-        headunitWifiSsid = sharedPreferences.getString("settings_wireless_headunit_wifi_ssid", getString(R.string.settings_wireless_headunit_wifi_ssid_default_value));
-        headunitWifiWpa2Passphrase = sharedPreferences.getString("settings_wireless_headunit_wifi_wpa2_passphrase", getString(R.string.settings_wireless_headunit_wifi_wpa2_passphrase_default_value));
-        headunitWifiIpAddress = sharedPreferences.getString("settings_wireless_headunit_ip_address", getString(R.string.settings_wireless_headunit_ip_address_default_value));
-        headunitWifiUsingRouter = sharedPreferences.getBoolean("settings_wireless_headunit_wifi_using_router", Boolean.parseBoolean(getString(R.string.settings_wireless_headunit_wifi_using_router_default_value)));
-    }
 
-    protected void registerOnSharedPreferenceChangeListener() {
-        PreferenceManager.getDefaultSharedPreferences(this)
-                .registerOnSharedPreferenceChangeListener((prefs, key) -> {
-                    switch (key) {
-                        case "settings_wireless_headunit_wifi_ssid":
-                            headunitWifiSsid = prefs.getString(key, getString(R.string.settings_wireless_headunit_wifi_ssid_default_value));
-                            break;
-                        case "settings_wireless_headunit_wifi_wpa2_passphrase":
-                            headunitWifiWpa2Passphrase = prefs.getString(key, getString(R.string.settings_wireless_headunit_wifi_wpa2_passphrase_default_value));
-                            break;
-                        case "settings_wireless_headunit_ip_address":
-                            headunitWifiIpAddress = prefs.getString(key, getString(R.string.settings_wireless_headunit_ip_address_default_value));
-                            break;
-                        case "settings_wireless_headunit_wifi_using_router":
-                            headunitWifiUsingRouter = prefs.getBoolean(key, Boolean.parseBoolean(getString(R.string.settings_wireless_headunit_wifi_using_router_default_value)));
-                            break;
-                    }
-                });
-    }
+    private void updateWidget(int id){
+        Intent intent = new Intent(this, WiFiLauncherServiceWidget.class);
+        intent.setAction(WIDGET_ACTION);
+        PendingIntent pd;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            pd = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+        else
+            pd = PendingIntent.getBroadcast(this, 0, intent, 0);
 
-    protected void registerOnStatusChangedListenerUpdateNotification() {
-        addStatusChangedListener((isRunning, isConnected) -> {
-            if (isConnected) {
-                Notification notification = getNotification(this, getString(R.string.service_wifi_connected_text));
-                notificationManager.notify(NOTIFICATION_ID, notification);
-                registerOnLostNetworkCallback();
-                removeTryToConnectCallback();
-                removeAllUserNotifications();
-            }
-        });
-    }
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(this);
+        RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.widget_wi_fi_launcher_service);
+        ComponentName thisWidget = new ComponentName(this, WiFiLauncherServiceWidget.class);
+        remoteViews.setTextViewText(R.id.appwidget_text, getString(id));
+        remoteViews.setOnClickPendingIntent(R.id.appwidget_container, pd);
+        appWidgetManager.updateAppWidget(thisWidget, remoteViews);
 
-    protected void registerOnStatusChangedListenerUpdateWidget() {
-        addStatusChangedListener((isRunning, isConnected) -> {
-            int[] ids = AppWidgetManager.getInstance(getApplication())
-                .getAppWidgetIds(new ComponentName(getApplication(), WiFiLauncherServiceWidget.class));
-
-            if (ids.length > 0) {
-                Intent intent = new Intent(this, WiFiLauncherServiceWidget.class);
-                intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-                intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
-
-                sendBroadcast(intent);
-            }
-        });
-    }
-
-    private void removeTryToConnectCallback() {
-        handler.removeCallbacks(TryToConnectRunnable);
-    }
-
-    private void registerTryToConnectCallback() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (!handler.hasCallbacks(TryToConnectRunnable)) {
-                handler.postDelayed(TryToConnectRunnable, FIVE_SECONDS);
-            }
-        } else {
-            handler.removeCallbacks(TryToConnectRunnable);
-            handler.postDelayed(TryToConnectRunnable, FIVE_SECONDS);
-        }
-    }
-
-    private final Runnable TryToConnectRunnable = () -> {
-        Log.d("WifiService", "TRY TO CONNECT FROM RUNNABLE");
-        checkIfIsInCarMode();
-
-        if (!isConnected) {
-            tryToConnect();
-        }
-    };
-
-    private final Runnable StopServiceRunnable = new Runnable() {
-        public void run() {
-            Log.d("WifiService", "STOP SERVICE RUNNABLE CHECK");
-            if (!isConnected) {
-                Log.d("WifiService", String.format("STOPPING SERVICE BY TIME (%s min)", serviceTimeoutInMinutes));
-                stopForeground(true);
-                stopSelf();
-            } else {
-                handler.removeCallbacks(StopServiceRunnable);
-            }
-        }
-    };
-
-    /**
-     * Register onLostNetworkCallback if stopServiceLosesWifiConnection preference is turned on and if it's connected to HUR.
-     */
-    private void registerOnLostNetworkCallback() {
-        if (isConnected && networkCallback == null) {
-            Log.d("WifiService", "registering OnLostNetworkCallback");
-            final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (connectivityManager != null) {
-                NetworkRequest.Builder builder = new NetworkRequest.Builder();
-                builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
-                networkCallback = new ConnectivityManager.NetworkCallback() {
-                    @Override
-                    public void onLost(@NonNull Network network) {
-                        Log.d("WifiService", "Lost connection to HUR wifi, exiting the app");
-                        setIsConnected(false);
-                        removeNetworkCallback();
-                        stopForeground(true);
-                        stopSelf();
-                    }
-                };
-                connectivityManager.registerNetworkCallback(
-                        builder.build(), networkCallback
-                );
-            }
-        }
-    }
-
-    protected void checkIfIsInCarMode() {
-        if (((UiModeManager) getSystemService(Context.UI_MODE_SERVICE)).getCurrentModeType() == Configuration.UI_MODE_TYPE_CAR) {
-            Log.d("WifiService", "ENTER CAR MODE (detected on WifiService)");
-            setIsConnected(true);
-        }
-    }
-
-    protected void removeAllUserNotifications() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            notificationManager.cancel(EnableWifiActivity.WIFI_NOTIFICATION_ID);
-            notificationManager.cancel(EnableLocationActivity.LOCATION_NOTIFICATION_ID);
-            sendBroadcast(new Intent(EnableWifiActivity.FINISH_WIFI_USER_ACTION_ACTIVITIES_INTENT));
-        }
-        sendBroadcast(new Intent(EnableLocationActivity.FINISH_LOCATION_USER_ACTION_ACTIVITIES_INTENT));
     }
 
     @Override
@@ -466,62 +333,29 @@ public class WifiService extends Service {
             Log.d("WifiService", "Start service");
             super.onStartCommand(intent, flags, startId);
         }
+
+        updateWidget(R.string.app_widget_running);
+
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        setIsRunning(false);
-        askingForLocation = false;
-
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(wifiLocalReceiver);
-        unregisterReceiver(carModeReceiver);
-
-        removeAllUserNotifications();
-
-        removeTryToConnectCallback();
-        handler.removeCallbacks(StopServiceRunnable);
-    }
-
-    public static void addStatusChangedListener(WifiServiceStatusChangedListener listener) {
-        listeners.add(listener);
-    }
-
-    public static boolean isRunning() {
-        return isRunning;
-    }
-
-    private static void setIsRunning(boolean isRunning) {
-        WifiService.isRunning = isRunning;
-        listeners.forEach(l -> l.OnStatusChanged(isRunning, isConnected));
-    }
-
-    public static boolean isConnected() {
-        return isConnected;
-    }
-
-    public static void setIsConnected(boolean isConnected) {
-        WifiService.isConnected = isConnected;
-        listeners.forEach(l -> l.OnStatusChanged(isRunning, isConnected));
-    }
-
-    private void removeNetworkCallback() {
-        if (networkCallback != null) {
-            Log.d("WifiService", "Removing Network callback");
-            final ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            connectivityManager.unregisterNetworkCallback(networkCallback);
-            networkCallback = null;
+        isRunning=false;
+        updateWidget(R.string.app_widget_paused);
+        if (mDiscoveryListener != null) {
+            try {
+                mNsdManager.stopServiceDiscovery(mDiscoveryListener);
+            }
+            catch (Exception e){}
         }
+
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router",false))
+            startTether(this, false);
     }
 
-    private String getSanitizedSsid(String value) {
-        return value.replaceAll("^\"|\"$", STRING_EMPTY);
-    }
 
-    private Boolean isUsingRouter() {
-        return headunitWifiUsingRouter;
-    }
 
     @Nullable
     public IBinder onBind(Intent intent) {

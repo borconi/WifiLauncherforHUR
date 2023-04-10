@@ -5,53 +5,53 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.widget.RemoteViews;
 
 import com.borconi.emil.wifilauncherforhur.services.WifiService;
 
 import static com.borconi.emil.wifilauncherforhur.services.WifiService.ACTION_FOREGROUND_STOP;
+import static com.borconi.emil.wifilauncherforhur.services.WifiService.isRunning;
 
 /**
  * Implementation of App Widget functionality.
  */
 public class WiFiLauncherServiceWidget extends AppWidgetProvider {
 
+    public final static String WIDGET_ACTION="com.borconi.emil.wifilauncherforhur.widget";
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
         // Construct the RemoteViews object
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_wi_fi_launcher_service);
 
+        Intent intent = new Intent(context, WiFiLauncherServiceWidget.class);
+        intent.setAction(WIDGET_ACTION);
+        PendingIntent pd = PendingIntent.getBroadcast(context, 0, intent, 0);
+
         if (WifiService.isRunning()) {
-            if (WifiService.isConnected()) {
-                views.setImageViewResource(R.id.appwidget_icon, R.mipmap.ic_widget_connected);
-                views.setTextViewText(R.id.appwidget_text, context.getString(R.string.app_widget_connected));
-                views.setContentDescription(R.id.appwidget_text, context.getString(R.string.app_widget_connected));
-            } else {
                 views.setImageViewResource(R.id.appwidget_icon, R.mipmap.ic_widget_running);
                 views.setTextViewText(R.id.appwidget_text, context.getString(R.string.app_widget_running));
                 views.setContentDescription(R.id.appwidget_text, context.getString(R.string.app_widget_running));
 
-                Intent wifiServiceIntent = new Intent(context, WifiService.class);
-                wifiServiceIntent.setAction(ACTION_FOREGROUND_STOP);
-                PendingIntent pendingIntent = PendingIntent.getForegroundService(context, 2, wifiServiceIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-                views.setOnClickPendingIntent(R.id.appwidget_container, pendingIntent);
-            }
         } else {
             views.setImageViewResource(R.id.appwidget_icon, R.mipmap.ic_widget_preview_round);
             views.setTextViewText(R.id.appwidget_text, context.getString(R.string.app_widget_paused));
             views.setContentDescription(R.id.appwidget_text, context.getString(R.string.app_widget_paused));
-
-            Intent wifiServiceIntent = new Intent(context, WifiService.class);
-            PendingIntent pendingIntent = PendingIntent.getForegroundService(context, 1, wifiServiceIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-            views.setOnClickPendingIntent(R.id.appwidget_container, pendingIntent);
         }
-
+        views.setOnClickPendingIntent(R.id.appwidget_container, pd);
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      if (isRunning())
+          context.stopService(new Intent(context, WifiService.class));
+      else
+          context.startService(new Intent(context, WifiService.class));
+    };
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         // There may be multiple widgets active, so update all of them

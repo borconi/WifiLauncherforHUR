@@ -1,8 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="service_running_for_default_value" translatable="false">2</string>
-    <string name="settings_wireless_headunit_wifi_ssid_default_value" translatable="false">HUR</string>
-    <string name="settings_wireless_headunit_wifi_wpa2_passphrase_default_value" translatable="false">AndroidAutoConnect</string>
-    <string name="settings_wireless_headunit_ip_address_default_value" translatable="false" />
-    <string name="settings_wireless_headunit_wifi_using_router_default_value" translatable="false">false</string>
-</resources>
+<resources></resources>
