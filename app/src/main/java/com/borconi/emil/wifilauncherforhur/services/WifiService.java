@@ -1,6 +1,11 @@
 package com.borconi.emil.wifilauncherforhur.services;
 
-import android.app.Notification;
+import static androidx.core.app.NotificationCompat.EXTRA_NOTIFICATION_ID;
+import static androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC;
+import static com.borconi.emil.wifilauncherforhur.WiFiLauncherServiceWidget.WIDGET_ACTION;
+import static com.borconi.emil.wifilauncherforhur.receivers.WifiReceiver.ACTION_WIFI_LAUNCHER_EXIT;
+import static com.borconi.emil.wifilauncherforhur.tethering.MyTether.startTether;
+
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -9,41 +14,38 @@ import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
+import android.net.DhcpInfo;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
+import android.net.NetworkRequest;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.RemoteViews;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
 
 import com.borconi.emil.wifilauncherforhur.R;
 import com.borconi.emil.wifilauncherforhur.WiFiLauncherServiceWidget;
 import com.borconi.emil.wifilauncherforhur.receivers.WifiReceiver;
 
-import static androidx.core.app.NotificationCompat.EXTRA_NOTIFICATION_ID;
-import static androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC;
-import static com.borconi.emil.wifilauncherforhur.WiFiLauncherServiceWidget.WIDGET_ACTION;
-import static com.borconi.emil.wifilauncherforhur.receivers.WifiReceiver.ACTION_WIFI_LAUNCHER_EXIT;
-import static com.borconi.emil.wifilauncherforhur.tethering.MyTether.startTether;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.nio.ByteOrder;
 import java.util.Random;
 
 public class WifiService extends Service {
@@ -72,6 +74,10 @@ public class WifiService extends Service {
     private PendingIntent pendingIntent;
     private NotificationCompat.Builder notification;
 
+    private boolean legacy;
+
+    private ConnectivityManager connectivityManager;
+
     public static boolean isRunning() {
         return isRunning;
     }
@@ -79,21 +85,83 @@ public class WifiService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        Random r = new Random();
+        websockport = r.nextInt(9998 - 8081) + 8081;
+
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         mNsdManager = (NsdManager) getSystemService(Context.NSD_SERVICE);
         verifyOrCreateNotificationChannels();
         notification = getNotification(this, getString(R.string.service_wifi_looking_text));
         startForeground(NOTIFICATION_ID, notification.build());
-        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router",false))
-            startTether(this, true);
-        initializeDiscoveryListener();
-        mNsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
+        legacy=PreferenceManager.getDefaultSharedPreferences(this).getBoolean("legacy_mode",false);
+        if (!legacy) {
+            if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
+                startTether(this, true);
+            initializeDiscoveryListener();
+            mNsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
+        }
+        else
+        {
+            NetworkRequest networkRequest = new NetworkRequest.Builder()
+                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                    .build();
+             connectivityManager =
+                    (ConnectivityManager) getSystemService(ConnectivityManager.class);
+            connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+
+        }
         isRunning=true;
     }
 
 
+    private ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+        @Override
+        public void onAvailable(@NonNull Network network) {
+            super.onAvailable(network);
+
+            Log.d(TAG,"Found a network: "+network);
+            getCurrentWifiGateway();
+            new hurToPhone(network).start();
+        }
+
+        @Override
+        public void onLost(@NonNull Network network) {
+            super.onLost(network);
+        }
+
+        @Override
+        public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities networkCapabilities) {
+            super.onCapabilitiesChanged(network, networkCapabilities);
+            final boolean unmetered = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
+        }
+    };
 
 
+
+    private Intent getAAIntent(){
+        ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        Network ns = connectivity.getActiveNetwork();
+
+
+        Intent androidAutoWirelessIntent = new Intent();
+        WifiInfo wifiinfo = null;
+        try {
+            Class<?> cl = Class.forName("android.net.wifi.WifiInfo");
+            wifiinfo = (WifiInfo) cl.newInstance();
+        }
+        catch (Exception e){e.printStackTrace();}
+
+
+        androidAutoWirelessIntent.setClassName(PACKAGE_NAME_ANDROID_AUTO_WIRELESS, CLASS_NAME_ANDROID_AUTO_WIRELESS);
+        androidAutoWirelessIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        androidAutoWirelessIntent
+                .putExtra(PARAM_HOST_ADDRESS_EXTRA_NAME, "127.0.0.1")
+                .putExtra(PARAM_SERVICE_PORT_EXTRA_NAME, websockport)
+                .putExtra("wifi_info",wifiinfo)
+                .putExtra("PARAM_SERVICE_WIFI_NETWORK", ns);
+
+        return androidAutoWirelessIntent;
+    }
     private void initializeDiscoveryListener() {
         mDiscoveryListener = new NsdManager.DiscoveryListener() {
 
@@ -112,37 +180,16 @@ public class WifiService extends Service {
                         Log.d(TAG, "Service resolved: " + serviceInfo);
                         hostIpAddress = serviceInfo.getHost().getHostAddress();
                         Log.d(TAG, "Host IP address: " + hostIpAddress);
-                        Random r = new Random();
-                        websockport = r.nextInt(9998 - 8081) + 8081;
-
-                        notification.setContentText(getString(R.string.connectedtocar));
-                        notificationManager.notify(NOTIFICATION_ID, notification.build());
-
-                        ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                        Network ns = connectivity.getActiveNetwork();
 
 
-                        Intent androidAutoWirelessIntent = new Intent();
-                        WifiInfo wifiinfo = null;
-                        try {
-                            Class<?> cl = Class.forName("android.net.wifi.WifiInfo");
-                            wifiinfo = (WifiInfo) cl.newInstance();
-                        }
-                        catch (Exception e){e.printStackTrace();}
 
 
-                        androidAutoWirelessIntent.setClassName(PACKAGE_NAME_ANDROID_AUTO_WIRELESS, CLASS_NAME_ANDROID_AUTO_WIRELESS);
-                        androidAutoWirelessIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        androidAutoWirelessIntent
-                                .putExtra(PARAM_HOST_ADDRESS_EXTRA_NAME, "127.0.0.1")
-                                .putExtra(PARAM_SERVICE_PORT_EXTRA_NAME, websockport)
-                                .putExtra("wifi_info",wifiinfo)
-                                .putExtra("PARAM_SERVICE_WIFI_NETWORK", ns);
+
                         try {
                             phoneToHur.start();
-                            hurToPhone.start();
+                            new hurToPhone(null).start();
                             mNsdManager.stopServiceDiscovery(mDiscoveryListener);
-                            startActivity(androidAutoWirelessIntent);
+                            startActivity(getAAIntent());
 
                         }
                         catch (Exception e)
@@ -220,30 +267,59 @@ public class WifiService extends Service {
     });
 
 
-    private final Thread hurToPhone = new Thread(new Runnable() {
+    private class hurToPhone extends Thread implements Runnable {
+
+        Network n;
+
+        public hurToPhone(Network n) {
+            this.n = n;
+        }
+
         @Override
         public void run() {
+            Log.d(TAG,"Trying to connect: "+hostIpAddress);
             try {
-                remotesocket=new Socket(hostIpAddress,5288);
-                hurtophoneoutput=remotesocket.getOutputStream();
-                hurtophoneinput=remotesocket.getInputStream();
-                byte[] remotebuffer=new byte[16384];
-                int got;
-                while (isRunning)
+                if (n==null)
+                    remotesocket=new Socket(hostIpAddress,5288);
+                else
                 {
-                    while (localsocket==null)
-                    {
-                        Thread.sleep(100);
-                    }
-                    got=hurtophoneinput.read(remotebuffer);
-                    phonetohuroutput.write(remotebuffer,0,got);
+                    remotesocket = n.getSocketFactory().createSocket();
+                    remotesocket.connect(new InetSocketAddress(hostIpAddress, 5288));
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-                stopSelf();
+                if (legacy)
+                {
+                    startActivity(getAAIntent());
+                    phoneToHur.start();
+                }
+            } catch (IOException e) {
+                //Failed to connect to HUR probably the wrong network.... whatever....
             }
+            if (remotesocket!=null && remotesocket.isConnected())
+                try {
+
+                    hurtophoneoutput=remotesocket.getOutputStream();
+                    hurtophoneinput=remotesocket.getInputStream();
+                    byte[] remotebuffer=new byte[16384];
+                    int got;
+                    notification.setContentText(getString(R.string.connectedtocar));
+                    notificationManager.notify(NOTIFICATION_ID, notification.build());
+                    while (isRunning)
+                    {
+                        while (localsocket==null)
+                        {
+                            Thread.sleep(100);
+                        }
+                        got=hurtophoneinput.read(remotebuffer);
+                        phonetohuroutput.write(remotebuffer,0,got);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    stopSelf();
+                }
         }
-    });
+
+    };
+
 
 
 
@@ -351,8 +427,17 @@ public class WifiService extends Service {
             catch (Exception e){}
         }
 
-        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router",false))
-            startTether(this, false);
+        if (!legacy) {
+            if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
+                startTether(this, false);
+        }
+        else
+        {
+           try {
+               connectivityManager.unregisterNetworkCallback( networkCallback);
+           }
+            catch (Exception e){}
+        }
     }
 
 
@@ -361,4 +446,34 @@ public class WifiService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
+
+    private void getCurrentWifiGateway() {
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        DhcpInfo dhcpInfo = wifiManager.getDhcpInfo();
+
+        if (ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN)) {
+            dhcpInfo.gateway = Integer.reverseBytes(dhcpInfo.gateway);
+        }
+
+        byte[] ipAddressBytes = {
+                (byte) (dhcpInfo.gateway >>> 24),
+                (byte) (dhcpInfo.gateway >>> 16),
+                (byte) (dhcpInfo.gateway >>> 8),
+                (byte) dhcpInfo.gateway
+        };
+
+        try {
+            InetAddress gatewayAddress = InetAddress.getByAddress(ipAddressBytes);
+            hostIpAddress= gatewayAddress.getHostAddress();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+
+
+
+
 }

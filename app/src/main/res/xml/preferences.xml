@@ -59,9 +59,20 @@
             android:enabled="true"
             android:key="settings_wireless_headunit_wifi_using_router"
             android:persistent="true"
+            android:dependency="legacy_mode"
             android:title="@string/settings_wireless_headunit_wifi_using_router_title"
             android:summary="@string/settings_wireless_headunit_wifi_using_router_description" />
 
+
+        <SwitchPreference
+
+            app:iconSpaceReserved="true"
+            android:defaultValue="false"
+            android:key="legacy_mode"
+            android:disableDependentsState="true"
+            android:persistent="true"
+            android:title="@string/legacy_mode"
+            android:summary="@string/legacy_mode_desc" />
 
 
     </PreferenceCategory>

@@ -31,4 +31,6 @@
     <string name="save">Understood</string>
     <string name="close">Close</string>
     <string name="connectedtocar">Connected to HUR</string>
+    <string name="legacy_mode">Legacy Mode</string>
+    <string name="legacy_mode_desc">Only use this option, if HUR explicitly says you need too. When this mode is enabled, WiFi Launcher will only work, in client mode, meaning, devire running HUR must create the hotspot.</string>
 </resources>
