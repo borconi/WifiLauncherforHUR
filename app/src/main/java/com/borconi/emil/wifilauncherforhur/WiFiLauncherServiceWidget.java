@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 import android.widget.RemoteViews;
+import android.widget.Toast;
 
 import com.borconi.emil.wifilauncherforhur.services.WifiService;
 
@@ -47,10 +48,15 @@ public class WiFiLauncherServiceWidget extends AppWidgetProvider {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-      if (isRunning())
-          context.stopService(new Intent(context, WifiService.class));
-      else
-          context.startService(new Intent(context, WifiService.class));
+        try {
+            if (isRunning())
+                context.stopService(new Intent(context, WifiService.class));
+            else
+                context.startForegroundService(new Intent(context, WifiService.class));
+        }
+        catch (Exception e){
+            Toast.makeText(context,context.getString(R.string.cant_start),Toast.LENGTH_LONG).show();
+        }
     };
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {

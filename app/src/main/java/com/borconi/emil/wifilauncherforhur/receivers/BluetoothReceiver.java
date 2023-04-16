@@ -69,6 +69,7 @@ public class BluetoothReceiver extends BroadcastReceiver {
         if (WifiService.isRunning())
             return;
         Intent startWifiServiceIntent = new Intent(context, WifiService.class);
-        context.startService(startWifiServiceIntent);
+        context.startForegroundService(startWifiServiceIntent);
+
     }
 }

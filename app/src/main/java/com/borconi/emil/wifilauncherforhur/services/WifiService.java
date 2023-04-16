@@ -75,6 +75,7 @@ public class WifiService extends Service {
     private NotificationCompat.Builder notification;
 
     private boolean legacy;
+    private ServerSocket legacylistener;
 
     private ConnectivityManager connectivityManager;
 
@@ -85,6 +86,7 @@ public class WifiService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        connectivityManager=getSystemService(ConnectivityManager.class);
         Random r = new Random();
         websockport = r.nextInt(9998 - 8081) + 8081;
 
@@ -94,21 +96,44 @@ public class WifiService extends Service {
         notification = getNotification(this, getString(R.string.service_wifi_looking_text));
         startForeground(NOTIFICATION_ID, notification.build());
         legacy=PreferenceManager.getDefaultSharedPreferences(this).getBoolean("legacy_mode",false);
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
+            startTether(this, true);
         if (!legacy) {
-            if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
-                startTether(this, true);
             initializeDiscoveryListener();
             mNsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
         }
         else
         {
-            NetworkRequest networkRequest = new NetworkRequest.Builder()
-                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                    .build();
-             connectivityManager =
-                    (ConnectivityManager) getSystemService(ConnectivityManager.class);
-            connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+            if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
+            {
+                NetworkRequest networkRequest = new NetworkRequest.Builder()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .build();
+                connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
+            }
 
+            else {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            if (legacylistener == null) {
+                                legacylistener = new ServerSocket(5289);
+                                legacylistener.setReuseAddress(true);
+                            }
+                            Socket s = legacylistener.accept();
+                            Log.d(TAG,"Got someone on this port");
+                            if (isRunning) {
+                                hostIpAddress = (((InetSocketAddress) s.getRemoteSocketAddress()).getAddress()).toString().replace("/", "");
+                                Log.d(TAG,"Should try to start AA indent with: "+hostIpAddress);
+                                new hurToPhone(null).start();
+                            }
+                        } catch (Exception e) {
+                           e.printStackTrace();
+                        }
+                    }
+                }).start();
+            }
         }
         isRunning=true;
     }
@@ -132,15 +157,15 @@ public class WifiService extends Service {
         @Override
         public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities networkCapabilities) {
             super.onCapabilitiesChanged(network, networkCapabilities);
-            final boolean unmetered = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
+
         }
     };
 
 
 
     private Intent getAAIntent(){
-        ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        Network ns = connectivity.getActiveNetwork();
+
+        Network ns = connectivityManager.getActiveNetwork();
 
 
         Intent androidAutoWirelessIntent = new Intent();
@@ -177,6 +202,7 @@ public class WifiService extends Service {
                     @Override
                     public void onServiceResolved(NsdServiceInfo serviceInfo) {
 
+
                         Log.d(TAG, "Service resolved: " + serviceInfo);
                         hostIpAddress = serviceInfo.getHost().getHostAddress();
                         Log.d(TAG, "Host IP address: " + hostIpAddress);
@@ -187,7 +213,12 @@ public class WifiService extends Service {
 
                         try {
                             phoneToHur.start();
-                            new hurToPhone(null).start();
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                new hurToPhone(service.getNetwork()).start();
+                            }
+                            else
+                                new hurToPhone( connectivityManager.getActiveNetwork()).start();
+
                             mNsdManager.stopServiceDiscovery(mDiscoveryListener);
                             startActivity(getAAIntent());
 
@@ -401,14 +432,17 @@ public class WifiService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (ACTION_FOREGROUND_STOP.equals(intent.getAction())) {
-            Log.d("WifiService", "Stop service");
-            stopForeground(true);
-            stopSelf();
-        } else {
-            Log.d("WifiService", "Start service");
+        if (intent != null)
+            if (ACTION_FOREGROUND_STOP.equals(intent.getAction())) {
+                Log.d("WifiService", "Stop service");
+                stopForeground(true);
+                stopSelf();
+            } else {
+                Log.d("WifiService", "Start service");
+                super.onStartCommand(intent, flags, startId);
+            }
+        else
             super.onStartCommand(intent, flags, startId);
-        }
 
         updateWidget(R.string.app_widget_running);
 
@@ -427,16 +461,17 @@ public class WifiService extends Service {
             catch (Exception e){}
         }
 
-        if (!legacy) {
-            if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
+
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
                 startTether(this, false);
-        }
+
         else
         {
-           try {
-               connectivityManager.unregisterNetworkCallback( networkCallback);
-           }
-            catch (Exception e){}
+            if (legacy)
+                try {
+                   connectivityManager.unregisterNetworkCallback( networkCallback);
+                    }
+                catch (Exception e){}
         }
     }
 

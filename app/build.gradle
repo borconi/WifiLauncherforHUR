@@ -4,7 +4,7 @@ android {
     compileSdkVersion 33
     defaultConfig {
         applicationId "com.borconi.emil.wifilauncherforhur"
-        minSdkVersion 28
+        minSdkVersion 27
         targetSdkVersion 33
         versionCode 372
         versionName "3.7.2"

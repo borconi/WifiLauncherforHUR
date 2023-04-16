@@ -33,4 +33,5 @@
     <string name="connectedtocar">Connected to HUR</string>
     <string name="legacy_mode">Legacy Mode</string>
     <string name="legacy_mode_desc">Only use this option, if HUR explicitly says you need too. When this mode is enabled, WiFi Launcher will only work, in client mode, meaning, devire running HUR must create the hotspot.</string>
+    <string name="cant_start">Couldn\'t start the service from background. Is the DRAW OVER OTHER APPS permission enabled?</string>
 </resources>
