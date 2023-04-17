@@ -57,6 +57,22 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         PreferenceScreen preferenceScreen = getPreferenceScreen();
         bluetoothDevicesPreference = preferenceScreen.findPreference("selected_bluetooth_devices");
 
+        bluetoothDevicesPreference.setOnPreferenceClickListener(preference -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    Uri uri = Uri.fromParts("package", getContext().getPackageName(), null);
+                    intent.setData(uri);
+                    startActivity(intent);
+                    return false;
+                }
+                else
+                    tryPopulateBluetoothDevices((EmptyListPreference) preference);
+            return true;
+
+        });
+
         if (bluetoothDevicesPreference != null) {
             bluetoothDevicesPreference.setOnPreferenceChangeListener((preference, newValue) -> {
                 EmptyListPreference bluetoothDevicesPref = (EmptyListPreference) preference;
@@ -65,21 +81,7 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
                 return true;
             });
 
-            bluetoothDevicesPreference.setOnPreferenceClickListener(preference -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                    if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        Uri uri = Uri.fromParts("package", getContext().getPackageName(), null);
-                        intent.setData(uri);
-                        startActivity(intent);
-                        return false;
-                    }
-                    else
-                        tryPopulateBluetoothDevices((EmptyListPreference) preference);
-                return true;
 
-            });
         }
 
 
@@ -158,8 +160,9 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         PreferenceScreen preferenceScreen = getPreferenceScreen();
 
         MultiSelectListPreference bluetoothDevices = preferenceScreen.findPreference("selected_bluetooth_devices");
-        setBluetoothDevicesSummary(bluetoothDevices);
+
         tryPopulateBluetoothDevices((EmptyListPreference) bluetoothDevicesPreference);
+        setBluetoothDevicesSummary(bluetoothDevices);
         updatePermissionsStatusPreference();
 
 
