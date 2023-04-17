@@ -37,6 +37,7 @@ import com.borconi.emil.wifilauncherforhur.R;
 import com.borconi.emil.wifilauncherforhur.WiFiLauncherServiceWidget;
 import com.borconi.emil.wifilauncherforhur.receivers.WifiReceiver;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -217,7 +218,7 @@ public class WifiService extends Service {
                                 new hurToPhone(service.getNetwork()).start();
                             }
                             else
-                                new hurToPhone( connectivityManager.getActiveNetwork()).start();
+                                new hurToPhone( null).start();
 
                             mNsdManager.stopServiceDiscovery(mDiscoveryListener);
                             startActivity(getAAIntent());
@@ -263,7 +264,7 @@ public class WifiService extends Service {
 
 
     private OutputStream phonetohuroutput,hurtophoneoutput;
-    private InputStream phonetohurinput,hurtophoneinput;
+    private DataInputStream phonetohurinput,hurtophoneinput;
     private Socket localsocket,remotesocket;
     private int websockport;
     private final Thread phoneToHur = new Thread(new Runnable() {
@@ -276,17 +277,22 @@ public class WifiService extends Service {
                 serverSocket.bind(new InetSocketAddress(websockport));
                 localsocket=serverSocket.accept();
                 phonetohuroutput=localsocket.getOutputStream();
-                phonetohurinput=localsocket.getInputStream();
+                phonetohurinput=new DataInputStream(localsocket.getInputStream());
                 byte[] localbuffer=new byte[16384];
-                int got;
+
                 while (isRunning)
                 {
                     while (remotesocket==null)
                     {
                         Thread.sleep(100);
                     }
-                    got=phonetohurinput.read(localbuffer);
-                    hurtophoneoutput.write(localbuffer,0,got);
+                    phonetohurinput.readFully(localbuffer,0,4);
+                    short enc_len = (short) ((localbuffer[2] & 0xFF) << 8 | (localbuffer[3] & 0xFF));
+                    if (localbuffer[1] == 9 || localbuffer[1] == 1)
+                        enc_len += 4;
+
+                    phonetohurinput.readFully(localbuffer, 4, enc_len);
+                    hurtophoneoutput.write(localbuffer,0,enc_len+4);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -329,7 +335,7 @@ public class WifiService extends Service {
                 try {
 
                     hurtophoneoutput=remotesocket.getOutputStream();
-                    hurtophoneinput=remotesocket.getInputStream();
+                    hurtophoneinput=new DataInputStream(remotesocket.getInputStream());
                     byte[] remotebuffer=new byte[16384];
                     int got;
                     notification.setContentText(getString(R.string.connectedtocar));
@@ -340,8 +346,13 @@ public class WifiService extends Service {
                         {
                             Thread.sleep(100);
                         }
-                        got=hurtophoneinput.read(remotebuffer);
-                        phonetohuroutput.write(remotebuffer,0,got);
+                        hurtophoneinput.readFully(remotebuffer,0,4);
+
+                        short enc_len = (short) ((remotebuffer[2] & 0xFF) << 8 | (remotebuffer[3] & 0xFF));
+                        if (remotebuffer[1] == 9 || remotebuffer[1] == 1)
+                            enc_len += 4;
+                        hurtophoneinput.readFully(remotebuffer, 4, enc_len);
+                        phonetohuroutput.write(remotebuffer,0,enc_len+4);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
