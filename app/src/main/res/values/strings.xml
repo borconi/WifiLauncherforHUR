@@ -21,7 +21,7 @@
     <string name="service_wifi_ticker">Headunit Reloaded Wi-Fi Service is running trying to connect Wireless Android Auto</string>
     <string name="turn_off">Turn off</string>
     <string name="status_all_permissions_granted">Great! All permissions are granted</string>
-    <string name="status_denied_permissions">Oh no! There are permissions denied, tap here to fix it</string>
+    <string name="status_denied_permissions">Oh no! There are permissions denied or battery optimization is enforced, tap here to fix it</string>
     <string name="app_widget_paused">Paused</string>
     <string name="app_widget_running">Running</string>
     <string name="major_title">Major changes!</string>
@@ -34,4 +34,10 @@
     <string name="legacy_mode">Legacy Mode</string>
     <string name="legacy_mode_desc">Only use this option, if HUR explicitly says you need too. When this mode is enabled, WiFi Launcher will only work, in client mode, meaning, devire running HUR must create the hotspot.</string>
     <string name="cant_start">Couldn\'t start the service from background. Is the DRAW OVER OTHER APPS permission enabled?</string>
+    <string name="disable_optimization">App needs to have battery optimization turned off, to prevent the system for terminating the app mid connection.</string>
+    <string name="no_network">No active network, cannot start AA, is mobile data on?</string>
+    <string name="auto_reconnect">Try to auto reconnect</string>
+    <string name="auto_reconnect_desc">Try to automatically re-established the connection in case of disconnection as long as the selected BT device is still connected.</string>
+    <string name="ignore_bt">Ignore BT disconnect</string>
+    <string name="ignore_bt_desc">Keep the service running even after BT handsfree have been disconnected. You will need to manually quite the service in this case.</string>
 </resources>

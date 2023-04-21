@@ -1,5 +1,7 @@
 package com.borconi.emil.wifilauncherforhur.activities;
 
+import static android.content.Context.POWER_SERVICE;
+
 import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -10,6 +12,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -139,11 +142,13 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
                 Intent intent;
                 if (msg == R.string.alert_need_draw_over_other_apps)
                     intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).setData(Uri.parse("package:" + getActivity().getPackageName()));
-                else
+                else if (msg == R.string.System_settings_desc)
                     intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).setData(Uri.parse("package:" + getActivity().getPackageName()));
+                else
+                    intent= new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).setData(Uri.parse("package:" + getActivity().getPackageName()));
 
 
-                getActivity().startActivityForResult(intent, msg);
+                startActivity(intent);
                 dialog.dismiss();
             });
             builder.setOnDismissListener(dialog -> alertDialogOpen = false);
@@ -174,9 +179,17 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         Preference permissionsStatusPreference = preferenceScreen.findPreference("permissions_status");
         if (permissionsStatusPreference != null) {
 
+
             if (getPermission(false)) {
                 permissionsStatusPreference.setTitle(getString(R.string.status_all_permissions_granted));
                 permissionsStatusPreference.setIcon(R.drawable.ic_green_done_24);
+
+
+
+
+
+
+
             } else {
                 permissionsStatusPreference.setTitle(getString(R.string.status_denied_permissions));
                 permissionsStatusPreference.setIcon(R.drawable.ic_red_report_problem_24);
@@ -217,7 +230,10 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
     private boolean getPermission(boolean show) {
 
+        String packageName = getContext().getPackageName();
+        PowerManager pm = (PowerManager) getContext().getSystemService(POWER_SERVICE);
         if (Settings.canDrawOverlays(getContext()) && Settings.System.canWrite(getContext())
+            && pm.isIgnoringBatteryOptimizations(packageName)
             //&& ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
             //&& (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
         )
@@ -234,8 +250,14 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         else if (!Settings.canDrawOverlays(getContext())) {
             requestDrawOverlays(R.string.alert_need_draw_over_other_apps);
             return false;
-        } else {
+        } else if (!Settings.System.canWrite(getContext())) {
             requestDrawOverlays(R.string.System_settings_desc);
+            return false;
+        }
+        else
+        {
+            requestDrawOverlays(R.string.disable_optimization);
+
             return false;
         }
 

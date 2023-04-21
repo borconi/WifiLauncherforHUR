@@ -54,6 +54,9 @@ public class BluetoothReceiver extends BroadcastReceiver {
                     break;
                 case BluetoothDevice.ACTION_ACL_DISCONNECTED:
 
+                    if (sharedPreferences.getBoolean("ignore_bt_disconnect",false))
+                        return;
+
                         if (WifiService.isRunning()) {
                             Log.d("BluetoothReceiver", "We should exit wifi service");
                             Intent stopWifiServiceIntent = new Intent(context, WifiService.class);

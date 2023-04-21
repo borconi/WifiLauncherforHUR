@@ -72,6 +72,26 @@
             android:title="@string/legacy_mode"
             android:summary="@string/legacy_mode_desc" />
 
+        <SwitchPreference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:key="keep_running"
+            android:dependency="ignore_bt_disconnect"
+
+            android:persistent="true"
+            android:title="@string/auto_reconnect"
+            android:summary="@string/auto_reconnect_desc" />
+
+        <SwitchPreference
+            app:iconSpaceReserved="true"
+            android:enabled="true"
+            android:disableDependentsState="true"
+            android:defaultValue="false"
+            android:key="ignore_bt_disconnect"
+            android:persistent="true"
+            android:title="@string/ignore_bt"
+            android:summary="@string/ignore_bt_desc" />
+
 
     </PreferenceCategory>
 

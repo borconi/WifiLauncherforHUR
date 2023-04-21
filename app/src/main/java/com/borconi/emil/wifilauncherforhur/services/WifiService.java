@@ -6,14 +6,19 @@ import static com.borconi.emil.wifilauncherforhur.WiFiLauncherServiceWidget.WIDG
 import static com.borconi.emil.wifilauncherforhur.receivers.WifiReceiver.ACTION_WIFI_LAUNCHER_EXIT;
 import static com.borconi.emil.wifilauncherforhur.tethering.MyTether.startTether;
 
+import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.appwidget.AppWidgetManager;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.DhcpInfo;
 import android.net.Network;
@@ -24,12 +29,15 @@ import android.net.nsd.NsdServiceInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.RemoteViews;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.preference.PreferenceManager;
 
@@ -41,6 +49,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -48,12 +57,13 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteOrder;
 import java.util.Random;
+import java.util.Set;
 
 public class WifiService extends Service {
 
     private static final int NOTIFICATION_ID = 1035;
     private static final int TURN_OFF_REQUEST_CODE = 1040;
-     private static final String NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID = "wifilauncher_notification_channel_no_vibration_default";
+    private static final String NOTIFICATION_CHANNEL_NO_VIBRATION_DEFAULT_ID = "wifilauncher_notification_channel_no_vibration_default";
     private static final String NOTIFICATION_CHANNEL_WITH_VIBRATION_IMPORTANT_ID = "wifilauncher_notification_channel_with_vibration_high";
 
     private static boolean isRunning = false;
@@ -76,6 +86,7 @@ public class WifiService extends Service {
     private NotificationCompat.Builder notification;
 
     private boolean legacy;
+    private boolean found=false;
     private ServerSocket legacylistener;
 
     private ConnectivityManager connectivityManager;
@@ -87,7 +98,7 @@ public class WifiService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        connectivityManager=getSystemService(ConnectivityManager.class);
+        connectivityManager = getSystemService(ConnectivityManager.class);
         Random r = new Random();
         websockport = r.nextInt(9998 - 8081) + 8081;
 
@@ -96,24 +107,19 @@ public class WifiService extends Service {
         verifyOrCreateNotificationChannels();
         notification = getNotification(this, getString(R.string.service_wifi_looking_text));
         startForeground(NOTIFICATION_ID, notification.build());
-        legacy=PreferenceManager.getDefaultSharedPreferences(this).getBoolean("legacy_mode",false);
+        legacy = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("legacy_mode", false);
         if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
             startTether(this, true);
         if (!legacy) {
             initializeDiscoveryListener();
             mNsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
-        }
-        else
-        {
-            if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
-            {
+        } else {
+            if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false)) {
                 NetworkRequest networkRequest = new NetworkRequest.Builder()
                         .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                         .build();
                 connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
-            }
-
-            else {
+            } else {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -123,20 +129,20 @@ public class WifiService extends Service {
                                 legacylistener.setReuseAddress(true);
                             }
                             Socket s = legacylistener.accept();
-                            Log.d(TAG,"Got someone on this port");
+                            Log.d(TAG, "Got someone on this port");
                             if (isRunning) {
                                 hostIpAddress = (((InetSocketAddress) s.getRemoteSocketAddress()).getAddress()).toString().replace("/", "");
-                                Log.d(TAG,"Should try to start AA indent with: "+hostIpAddress);
+                                Log.d(TAG, "Should try to start AA indent with: " + hostIpAddress);
                                 new hurToPhone(null).start();
                             }
                         } catch (Exception e) {
-                           e.printStackTrace();
+                            e.printStackTrace();
                         }
                     }
                 }).start();
             }
         }
-        isRunning=true;
+        isRunning = true;
     }
 
 
@@ -145,7 +151,7 @@ public class WifiService extends Service {
         public void onAvailable(@NonNull Network network) {
             super.onAvailable(network);
 
-            Log.d(TAG,"Found a network: "+network);
+            Log.d(TAG, "Found a network: " + network);
             getCurrentWifiGateway();
             new hurToPhone(network).start();
         }
@@ -163,19 +169,25 @@ public class WifiService extends Service {
     };
 
 
-
-    private Intent getAAIntent(){
+    private Intent getAAIntent() {
 
         Network ns = connectivityManager.getActiveNetwork();
-
+        Log.d(TAG,"Active network is: "+ns);
+        if (ns==null)
+        {
+            notification.setContentText(getString(R.string.no_network));
+            notificationManager.notify(NOTIFICATION_ID, notification.build());
+            return null;
+        }
 
         Intent androidAutoWirelessIntent = new Intent();
         WifiInfo wifiinfo = null;
         try {
             Class<?> cl = Class.forName("android.net.wifi.WifiInfo");
             wifiinfo = (WifiInfo) cl.newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        catch (Exception e){e.printStackTrace();}
 
 
         androidAutoWirelessIntent.setClassName(PACKAGE_NAME_ANDROID_AUTO_WIRELESS, CLASS_NAME_ANDROID_AUTO_WIRELESS);
@@ -183,17 +195,31 @@ public class WifiService extends Service {
         androidAutoWirelessIntent
                 .putExtra(PARAM_HOST_ADDRESS_EXTRA_NAME, "127.0.0.1")
                 .putExtra(PARAM_SERVICE_PORT_EXTRA_NAME, websockport)
-                .putExtra("wifi_info",wifiinfo)
+                .putExtra("wifi_info", wifiinfo)
                 .putExtra("PARAM_SERVICE_WIFI_NETWORK", ns);
 
         return androidAutoWirelessIntent;
     }
+
     private void initializeDiscoveryListener() {
         mDiscoveryListener = new NsdManager.DiscoveryListener() {
 
             @Override
             public void onDiscoveryStarted(String regType) {
                 Log.d(TAG, "Service discovery started");
+
+                final Handler handler = new Handler(getMainLooper());
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isRunning)
+                            try {
+                                mNsdManager.stopServiceDiscovery(mDiscoveryListener);
+                            }
+                            catch (Exception e){}
+                    }
+                },5000);
+
             }
 
             @Override
@@ -209,23 +235,21 @@ public class WifiService extends Service {
                         Log.d(TAG, "Host IP address: " + hostIpAddress);
 
 
-
-
-
                         try {
+                            Intent aa=getAAIntent();
+                            if (aa==null)
+                                return;
+                            found=true;
                             phoneToHur.start();
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 new hurToPhone(service.getNetwork()).start();
-                            }
-                            else
-                                new hurToPhone( null).start();
+                            } else
+                                new hurToPhone(null).start();
 
                             mNsdManager.stopServiceDiscovery(mDiscoveryListener);
-                            startActivity(getAAIntent());
+                            startActivity(aa);
 
-                        }
-                        catch (Exception e)
-                        {
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
 
@@ -246,26 +270,28 @@ public class WifiService extends Service {
             @Override
             public void onDiscoveryStopped(String serviceType) {
                 Log.i(TAG, "Discovery stopped: " + serviceType);
+                if (!found && isRunning)
+                    mNsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, mDiscoveryListener);
             }
 
             @Override
             public void onStartDiscoveryFailed(String serviceType, int errorCode) {
                 Log.e(TAG, "Discovery failed: Error code: " + errorCode);
-                mNsdManager.stopServiceDiscovery(this);
+
             }
 
             @Override
             public void onStopDiscoveryFailed(String serviceType, int errorCode) {
                 Log.e(TAG, "Discovery failed: Error code: " + errorCode);
-                mNsdManager.stopServiceDiscovery(this);
+
             }
         };
     }
 
 
-    private OutputStream phonetohuroutput,hurtophoneoutput;
-    private DataInputStream phonetohurinput,hurtophoneinput;
-    private Socket localsocket,remotesocket;
+    private OutputStream phonetohuroutput, hurtophoneoutput;
+    private DataInputStream phonetohurinput, hurtophoneinput;
+    private Socket localsocket, remotesocket;
     private int websockport;
     private final Thread phoneToHur = new Thread(new Runnable() {
         @Override
@@ -275,24 +301,22 @@ public class WifiService extends Service {
                 ServerSocket serverSocket = new ServerSocket();
                 serverSocket.setReuseAddress(true);
                 serverSocket.bind(new InetSocketAddress(websockport));
-                localsocket=serverSocket.accept();
-                phonetohuroutput=localsocket.getOutputStream();
-                phonetohurinput=new DataInputStream(localsocket.getInputStream());
-                byte[] localbuffer=new byte[16384];
+                localsocket = serverSocket.accept();
+                phonetohuroutput = localsocket.getOutputStream();
+                phonetohurinput = new DataInputStream(localsocket.getInputStream());
+                byte[] localbuffer = new byte[16384];
 
-                while (isRunning)
-                {
-                    while (remotesocket==null)
-                    {
+                while (isRunning) {
+                    while (remotesocket == null) {
                         Thread.sleep(100);
                     }
-                    phonetohurinput.readFully(localbuffer,0,4);
+                    phonetohurinput.readFully(localbuffer, 0, 4);
                     short enc_len = (short) ((localbuffer[2] & 0xFF) << 8 | (localbuffer[3] & 0xFF));
                     if (localbuffer[1] == 9 || localbuffer[1] == 1)
                         enc_len += 4;
 
                     phonetohurinput.readFully(localbuffer, 4, enc_len);
-                    hurtophoneoutput.write(localbuffer,0,enc_len+4);
+                    hurtophoneoutput.write(localbuffer, 0, enc_len + 4);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -314,45 +338,44 @@ public class WifiService extends Service {
 
         @Override
         public void run() {
-            Log.d(TAG,"Trying to connect: "+hostIpAddress);
+            Log.d(TAG, "Trying to connect: " + hostIpAddress);
             try {
-                if (n==null)
-                    remotesocket=new Socket(hostIpAddress,5288);
-                else
-                {
+                if (n == null)
+                    remotesocket = new Socket(hostIpAddress, 5288);
+                else {
                     remotesocket = n.getSocketFactory().createSocket();
                     remotesocket.connect(new InetSocketAddress(hostIpAddress, 5288));
                 }
-                if (legacy)
-                {
-                    startActivity(getAAIntent());
+                if (legacy) {
+                    Intent aa=getAAIntent();
+                    if (aa==null)
+                        return;
+                    startActivity(aa);
                     phoneToHur.start();
                 }
             } catch (IOException e) {
                 //Failed to connect to HUR probably the wrong network.... whatever....
             }
-            if (remotesocket!=null && remotesocket.isConnected())
+            if (remotesocket != null && remotesocket.isConnected())
                 try {
 
-                    hurtophoneoutput=remotesocket.getOutputStream();
-                    hurtophoneinput=new DataInputStream(remotesocket.getInputStream());
-                    byte[] remotebuffer=new byte[16384];
+                    hurtophoneoutput = remotesocket.getOutputStream();
+                    hurtophoneinput = new DataInputStream(remotesocket.getInputStream());
+                    byte[] remotebuffer = new byte[16384];
                     int got;
                     notification.setContentText(getString(R.string.connectedtocar));
                     notificationManager.notify(NOTIFICATION_ID, notification.build());
-                    while (isRunning)
-                    {
-                        while (localsocket==null)
-                        {
+                    while (isRunning) {
+                        while (localsocket == null) {
                             Thread.sleep(100);
                         }
-                        hurtophoneinput.readFully(remotebuffer,0,4);
+                        hurtophoneinput.readFully(remotebuffer, 0, 4);
 
                         short enc_len = (short) ((remotebuffer[2] & 0xFF) << 8 | (remotebuffer[3] & 0xFF));
                         if (remotebuffer[1] == 9 || remotebuffer[1] == 1)
                             enc_len += 4;
                         hurtophoneinput.readFully(remotebuffer, 4, enc_len);
-                        phonetohuroutput.write(remotebuffer,0,enc_len+4);
+                        phonetohuroutput.write(remotebuffer, 0, enc_len + 4);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -360,11 +383,9 @@ public class WifiService extends Service {
                 }
         }
 
-    };
+    }
 
-
-
-
+    ;
 
 
     protected void verifyOrCreateNotificationChannels() {
@@ -400,11 +421,11 @@ public class WifiService extends Service {
 
         Intent turnOffIntent = new Intent(context, WifiReceiver.class);
         turnOffIntent.setAction(ACTION_WIFI_LAUNCHER_EXIT);
-        turnOffIntent.putExtra(EXTRA_NOTIFICATION_ID,0);
+        turnOffIntent.putExtra(EXTRA_NOTIFICATION_ID, 0);
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-            pendingIntent = PendingIntent.getBroadcast(this, 0, turnOffIntent,  PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);
+            pendingIntent = PendingIntent.getBroadcast(this, 0, turnOffIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         else
             pendingIntent =
                     PendingIntent.getBroadcast(this, 0, turnOffIntent, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -416,14 +437,11 @@ public class WifiService extends Service {
                         pendingIntent).build());
 
 
-
         return builder;
     }
 
 
-
-
-    private void updateWidget(int id){
+    private void updateWidget(int id) {
         Intent intent = new Intent(this, WiFiLauncherServiceWidget.class);
         intent.setAction(WIDGET_ACTION);
         PendingIntent pd;
@@ -449,11 +467,16 @@ public class WifiService extends Service {
                 stopForeground(true);
                 stopSelf();
             } else {
+                if (isRunning)
+                    return START_STICKY;
                 Log.d("WifiService", "Start service");
                 super.onStartCommand(intent, flags, startId);
             }
-        else
+        else {
+            if (isRunning)
+                return START_STICKY;
             super.onStartCommand(intent, flags, startId);
+        }
 
         updateWidget(R.string.app_widget_running);
 
@@ -463,27 +486,49 @@ public class WifiService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        isRunning=false;
+        isRunning = false;
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
         updateWidget(R.string.app_widget_paused);
         if (mDiscoveryListener != null) {
             try {
                 mNsdManager.stopServiceDiscovery(mDiscoveryListener);
+            } catch (Exception e) {
             }
-            catch (Exception e){}
         }
 
 
-        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("settings_wireless_headunit_wifi_using_router", false))
-                startTether(this, false);
+        if (pref.getBoolean("settings_wireless_headunit_wifi_using_router", false))
+            startTether(this, false);
 
-        else
-        {
+        else {
             if (legacy)
                 try {
-                   connectivityManager.unregisterNetworkCallback( networkCallback);
-                    }
-                catch (Exception e){}
+                    connectivityManager.unregisterNetworkCallback(networkCallback);
+                } catch (Exception e) {
+                }
         }
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        boolean stillconnected=false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
+                  return;
+
+        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
+        Set<String> selectedBluetoothMacs = pref.getStringSet("selected_bluetooth_devices", null);
+        if (selectedBluetoothMacs==null)
+            return;
+
+        for (BluetoothDevice device : pairedDevices) {
+            Log.d(TAG,"Bonded device: "+device.getName());
+            if (isConnected(device)) {
+                String deviceAddress = device.getAddress();
+                    if (selectedBluetoothMacs.contains(deviceAddress))
+                        stillconnected = true;
+                }
+        }
+        Log.d(TAG,"We are still connected to the BT: "+stillconnected);
+        if (stillconnected && pref.getBoolean("keep_running",false) && !pref.getBoolean("ignore_bt_disconnect",false))
+            startForegroundService(new Intent(this,WifiService.class));
     }
 
 
@@ -519,7 +564,15 @@ public class WifiService extends Service {
     }
 
 
-
+    public static boolean isConnected(BluetoothDevice device) {
+        try {
+            Method m = device.getClass().getMethod("isConnected", (Class[]) null);
+            boolean connected = (boolean) m.invoke(device, (Object[]) null);
+            return connected;
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
 
 }
