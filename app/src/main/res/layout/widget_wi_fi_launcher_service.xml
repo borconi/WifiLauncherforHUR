@@ -28,6 +28,6 @@
         android:shadowDx="2"
         android:shadowRadius="2"
         android:textAlignment="center"
-        android:textSize="12sp" />
+        android:textSize="11sp" />
 
 </RelativeLayout>

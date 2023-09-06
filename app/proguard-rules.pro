@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+-dontwarn org.mockito.**
+-dontwarn android.net.**
+-dontwarn com.android.dx.mockito.**
+
+-keep class org.mockito** {*;}
+-keep class android.net** {*;}
+-keep class com.android.dx.mockito** {*;}

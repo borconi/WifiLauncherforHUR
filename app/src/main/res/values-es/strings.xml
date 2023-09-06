@@ -42,4 +42,6 @@
         <string name="auto_reconnect_desc">Intentar reconectar automáticamente en caso de desconexión siempre que el dispositivo Bluetooth seleccionado siga conectado.</string>
         <string name="ignore_bt">Ignorar desconexión de BT</string>
         <string name="ignore_bt_desc">Mantener el servicio en ejecución incluso después de que se haya desconectado el dispositivo Bluetooth manos libres. En este caso, deberá cerrar manualmente el servicio.</string>
+        <string name="battery_optimization_title">Restricción de optimización de batería</string>
+
 </resources>

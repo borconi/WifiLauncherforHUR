@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.util.Log;
 import android.widget.RemoteViews;
 import android.widget.Toast;
@@ -23,11 +24,16 @@ public class WiFiLauncherServiceWidget extends AppWidgetProvider {
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
         // Construct the RemoteViews object
+        Log.d("Widget","Update widget called");
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_wi_fi_launcher_service);
 
         Intent intent = new Intent(context, WiFiLauncherServiceWidget.class);
         intent.setAction(WIDGET_ACTION);
-        PendingIntent pd = PendingIntent.getBroadcast(context, 0, intent, 0);
+        PendingIntent pd;
+        if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.S)
+            pd = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+        else
+            pd = PendingIntent.getBroadcast(context, 0, intent, 0);
 
         if (WifiService.isRunning()) {
                 views.setImageViewResource(R.id.appwidget_icon, R.mipmap.ic_widget_running);
@@ -48,6 +54,13 @@ public class WiFiLauncherServiceWidget extends AppWidgetProvider {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        Log.d("Widget","Got action: "+intent.getAction());
+        if (intent.getAction()==null)
+            return;
+
+        if (!intent.getAction().equalsIgnoreCase(WIDGET_ACTION))
+            return;
         try {
             if (isRunning())
                 context.stopService(new Intent(context, WifiService.class));
@@ -61,6 +74,7 @@ public class WiFiLauncherServiceWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         // There may be multiple widgets active, so update all of them
+        Log.d("Widget","Update widget called");
         for (int appWidgetId : appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId);
         }

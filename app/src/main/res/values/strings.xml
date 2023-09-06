@@ -40,4 +40,23 @@
     <string name="auto_reconnect_desc">Try to automatically re-established the connection in case of disconnection as long as the selected BT device is still connected.</string>
     <string name="ignore_bt">Ignore BT disconnect</string>
     <string name="ignore_bt_desc">Keep the service running even after BT handsfree have been disconnected. You will need to manually quite the service in this case.</string>
+    <string name="battery_optimization_title">Battery optimization restriction</string>
+
+
+    <string name="hur_name">HUR WiFi name</string>
+    <string name="hur_name_desc">The WiFi hotspot name of device running HUR. This can be found in the tethering settings of the device running HUR.</string>
+
+    <string name="hur_p2p_name">HUR WiFi Direct name</string>
+    <string name="hur_p2p_name_desc">The WiFi Direct name of device running HUR. This will be displayed on HUR home screen if device running HUR supports WiFi P2P.</string>
+    <string name="background_location_needed">Background location needed. Without this, app won\'t be able to access WiFi P2P from the background.</string>
+    <string name="locations_needed">Location is needed for WiFi P2P, without location access WiFi Direct (P2P) won\'t be able to connect to HUR</string>
+    <string name="still_connected_to_wifi">Your phone is still connected to a WiFi network. AA will start when it disconnects</string>
+    <string name="select_wifi_mode">Select WiFi connection mode</string>
+    <string name="wifi_connection_mode">WiFi connection mode</string>
+
+    <string name="network_discovery">Network Discovery (both devices should be on same network)</string>
+    <string name="use_wifip2p">Use WiFi Direct (also know as WiFi P2P)</string>
+    <string name="client_mode">WiFi client mode (car headunit will create hotspot)</string>
+    <string name="tether">Create WiFi hotspot (won\'t work on all devices!)</string>
+
 </resources>

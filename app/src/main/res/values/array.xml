@@ -1,2 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+    <string-array name="wifi_mode_value">
+        <item>@string/network_discovery</item>
+        <item>@string/use_wifip2p</item>
+        <!-- <item>@string/use_wifi_nearby</item> -->
+        <item>@string/tether</item>
+        <item>@string/client_mode</item>
+
+    </string-array>
+    <string-array name="wifi_mode_description">
+        <item>1</item>
+        <item>2</item>
+        <!-- <item>3</item> -->
+        <item>4</item>
+        <item>5</item>
+>
+    </string-array>
+</resources>

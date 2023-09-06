@@ -53,24 +53,29 @@
         android:key="wireless_category">
 
 
-
-        <SwitchPreference
+        <ListPreference
             app:iconSpaceReserved="true"
             android:enabled="true"
-            android:key="settings_wireless_headunit_wifi_using_router"
+            android:defaultValue="1"
+            android:key="connection_mode"
             android:persistent="true"
-            android:title="@string/settings_wireless_headunit_wifi_using_router_title"
-            android:summary="@string/settings_wireless_headunit_wifi_using_router_description" />
+            android:entries="@array/wifi_mode_value"
+            android:entryValues="@array/wifi_mode_description"
 
+            android:summary="@string/select_wifi_mode"
+            android:title="@string/wifi_connection_mode"
+            />
 
-        <SwitchPreference
-
+        <EditTextPreference
             app:iconSpaceReserved="true"
-            android:defaultValue="false"
-            android:key="legacy_mode"
+            android:enabled="true"
+            android:defaultValue="HUR7"
+            android:key="hur_p2p_name"
             android:persistent="true"
-            android:title="@string/legacy_mode"
-            android:summary="@string/legacy_mode_desc" />
+            android:title="@string/hur_p2p_name"
+            android:summary="@string/hur_p2p_name_desc"
+            />
+
 
         <SwitchPreference
             app:iconSpaceReserved="true"

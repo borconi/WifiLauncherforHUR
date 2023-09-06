@@ -1,5 +1,7 @@
 package com.borconi.emil.wifilauncherforhur.receivers;
 
+import static com.borconi.emil.wifilauncherforhur.services.WifiService.mustexit;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -20,6 +22,7 @@ public class WifiReceiver extends BroadcastReceiver {
 
         switch (intent.getAction()) {
             case ACTION_WIFI_LAUNCHER_EXIT:
+                mustexit=true;
                 Intent startWifiServiceIntent = new Intent(context, WifiService.class);
                 context.stopService(startWifiServiceIntent);
                 break;

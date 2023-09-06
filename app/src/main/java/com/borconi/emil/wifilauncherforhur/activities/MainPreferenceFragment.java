@@ -25,12 +25,16 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.preference.EditTextPreference;
+import androidx.preference.ListPreference;
 import androidx.preference.MultiSelectListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 import androidx.preference.PreferenceScreen;
 
+import com.borconi.emil.wifilauncherforhur.BuildConfig;
 import com.borconi.emil.wifilauncherforhur.EmptyListPreference;
 import com.borconi.emil.wifilauncherforhur.R;
 import com.borconi.emil.wifilauncherforhur.services.WifiService;
@@ -51,6 +55,40 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
     }
 
+    private boolean updatepref(Preference preference, Object newValue){
+        if (newValue==null)
+            return false;
+
+        PreferenceScreen preferenceScreen = getPreferenceScreen();
+        int option=Integer.parseInt(newValue.toString());
+        EditTextPreference wifivalue=preferenceScreen.findPreference("hur_p2p_name");
+        if (option == 2)
+        {
+            wifivalue.setVisible(true);
+                wifivalue.setSummary(R.string.hur_p2p_name_desc);
+                wifivalue.setTitle(R.string.hur_p2p_name);
+        }
+        else
+            wifivalue.setVisible(false);
+
+        if (WifiService.isRunning())
+        {
+
+            getActivity().stopService(new Intent(getContext(), WifiService.class));
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(500);
+                        getActivity().startService(new Intent(getContext(), WifiService.class));
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }).start();
+        }
+        return true;
+    }
     @Override
     @SuppressWarnings("unchecked")
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -59,6 +97,16 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
         PreferenceScreen preferenceScreen = getPreferenceScreen();
         bluetoothDevicesPreference = preferenceScreen.findPreference("selected_bluetooth_devices");
+
+        preferenceScreen.findPreference("connection_mode").setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(@NonNull Preference preference, Object newValue) {
+              return updatepref(preference,newValue);
+            }
+        });
+
+        ListPreference p=preferenceScreen.findPreference("connection_mode");
+        updatepref(p,p.getValue());
 
         bluetoothDevicesPreference.setOnPreferenceClickListener(preference -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
@@ -141,15 +189,31 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
 
                 Intent intent;
                 if (msg == R.string.alert_need_draw_over_other_apps)
+                {
                     intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).setData(Uri.parse("package:" + getActivity().getPackageName()));
+                    startActivity(intent);
+                }
                 else if (msg == R.string.System_settings_desc)
+                {
                     intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).setData(Uri.parse("package:" + getActivity().getPackageName()));
-                else
+                    startActivity(intent);
+                }
+                else if (msg == R.string.battery_optimization_title)
+                {
                     intent= new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).setData(Uri.parse("package:" + getActivity().getPackageName()));
+                    builder.setTitle(getString(R.string.battery_optimization_title));
+                    startActivity(intent);
+                }
+                else if (msg == R.string.locations_needed)
+                    requestPermissionLauncher.launch(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION});
+                else
+                    requestPermissionLauncher.launch(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION});
 
 
-                startActivity(intent);
+
                 dialog.dismiss();
+
+
             });
             builder.setOnDismissListener(dialog -> alertDialogOpen = false);
             alertDialogOpen = true;
@@ -212,8 +276,8 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
                 permission.entrySet().forEach(entry -> {
                     System.out.println("Key : " + entry.getKey() + " Value : " + entry.getValue());
                     if (!entry.getValue()) {
-                        if (ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), entry.getKey()))
-                            ActivityCompat.requestPermissions(getActivity(),new String[]{entry.getKey()},2);
+                        if (!ActivityCompat.shouldShowRequestPermissionRationale(getActivity(), entry.getKey()))
+                            startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + BuildConfig.APPLICATION_ID)));
 
                         else {
                             if (!entry.getValue() && entry.getKey() == Manifest.permission.BLUETOOTH_CONNECT)
@@ -235,14 +299,35 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         if (Settings.canDrawOverlays(getContext()) && Settings.System.canWrite(getContext())
             && pm.isIgnoringBatteryOptimizations(packageName)
             //&& ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-            //&& (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
+            && ((Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            && (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED)
+            ) || ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED)
         )
             return true;
         else if (!show)
             return false;
-            // else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            //requestPermissionLauncher.launch(new String[]{Manifest.permission.BLUETOOTH_CONNECT});
-            //   return false;
+        else if ((Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION))
+            {
+                requestDrawOverlays(R.string.locations_needed);
+            }
+            else
+                requestPermissionLauncher.launch(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION});
+            return false;
+        }
+        else if ((Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
+            {
+                requestDrawOverlays(R.string.background_location_needed);
+            }
+            else
+                requestPermissionLauncher.launch(new String[]{Manifest.permission.ACCESS_BACKGROUND_LOCATION});
+            return false;
+        }
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissionLauncher.launch(new String[]{Manifest.permission.NEARBY_WIFI_DEVICES});
+            return false;
+        }
             //} else if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ////  requestPermissionLauncher.launch(new String[]{Manifest.permission.RECORD_AUDIO});
             //return false;

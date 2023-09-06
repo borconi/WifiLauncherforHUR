@@ -12,6 +12,10 @@ import androidx.annotation.RequiresApi;
 
 import java.io.DataOutputStream;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
 
 public class MyTether {
 
@@ -78,11 +82,15 @@ public class MyTether {
 
         if (turnOn) {
 
-            //this dont work
+
             MyOnStartTetheringCallback callback = new MyOnStartTetheringCallback() {
                 @Override
                 public void onTetheringStarted() {
                     Log.d(TAG, "Tethering Starterd");
+
+
+
+
                 }
 
                 @Override
