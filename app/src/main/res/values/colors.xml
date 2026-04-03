@@ -1,16 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Colors from https://material.io/resources/color -->
     <color name="white">@android:color/white</color>
     <color name="black">@android:color/black</color>
-    <color name="orange_700">#f57c00</color>
-    <color name="orange_700_variant">#bb4d00</color>
-    <color name="teal_700">#00796b</color>
-    <color name="teal_700_variant">#004c40</color>
-    <color name="teal_800_variant">#003d33</color>
-    <color name="bordeaux_700">#d32f2f</color>
-    <color name="bordeaux_700_variant">#9a0007</color>
-    <color name="blue_500">#2196f3</color>
-    <color name="blue_500_variant">#0069c0</color>
+    <color name="aa_green">#10B981</color>
+    <color name="aa_green_dark">#047857</color>
+    <color name="aa_teal">#14B8A6</color>
+    <color name="aa_slate">#0B1220</color>
+    <color name="aa_surface">#111827</color>
+    <color name="aa_surface_variant">#1F2937</color>
     <color name="ic_launcher_background">#FFFFFF</color>
 </resources>

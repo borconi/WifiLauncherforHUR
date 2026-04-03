@@ -1,20 +1,19 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
-    compileSdkVersion 33
+    namespace 'com.borconi.emil.wifilauncherforhur'
+    compileSdkVersion 34
+
     defaultConfig {
         applicationId "com.borconi.emil.wifilauncherforhur"
         minSdkVersion 27
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 390
         versionName "3.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-    lintOptions {
 
-        checkReleaseBuilds false
-
-    }
     buildTypes {
         release {
             minifyEnabled true
@@ -24,32 +23,59 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
-    namespace 'com.borconi.emil.wifilauncherforhur'
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.3'
+    }
+
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
 
     lintOptions {
+        checkReleaseBuilds false
         abortOnError false
     }
 }
 
 dependencies {
-
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.car.app:app:1.2.0"
     implementation "androidx.lifecycle:lifecycle-extensions:2.2.0"
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+    implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation platform('androidx.compose:compose-bom:2024.02.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'com.google.android.material:material:1.11.0'
     implementation "androidx.preference:preference:1.2.1"
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.google.android.gms:play-services-nearby:19.3.0'
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
     implementation 'com.linkedin.dexmaker:dexmaker-mockito:2.28.3'
     implementation 'com.linkedin.dexmaker:dexmaker:2.28.3'
-    implementation 'androidx.multidex:multidex:2.0.1'
 }
