@@ -60,7 +60,7 @@ public class NDSConnector extends Connector{
                         String hostIpAddress = serviceInfo.getHost().getHostAddress();
                         Log.d(TAG, "Host IP address: " + hostIpAddress);
                         if (!WifiService.connected.get())
-                            context.startActivity(getAAIntent(hostIpAddress, false));
+                            getAAIntent(hostIpAddress,context,5288);
                         found=true;
                         try {
                             mNsdManager.stopServiceDiscovery(mDiscoveryListener);

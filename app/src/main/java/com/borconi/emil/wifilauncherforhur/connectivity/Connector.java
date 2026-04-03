@@ -42,9 +42,9 @@ public class Connector {
 
     }
 
-    public Intent getAAIntent(String ip, boolean checkWifi) {
+    public static void getAAIntent(String ip, Context context, int port) {
 
-            Network fakeNetwork = null;
+          /*  Network fakeNetwork = null;
             try {
                 fakeNetwork = Mockito.mock(Network.class, withSettings().useConstructor(9999));
             } catch (Exception e) {
@@ -79,17 +79,16 @@ public class Connector {
             wifiinfo = (WifiInfo) cl.newInstance();
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }*/
 
-        androidAutoWirelessIntent.setClassName(PACKAGE_NAME_ANDROID_AUTO_WIRELESS, CLASS_NAME_ANDROID_AUTO_WIRELESS);
-        androidAutoWirelessIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        androidAutoWirelessIntent
-                .putExtra(PARAM_HOST_ADDRESS_EXTRA_NAME, ip)
-                .putExtra(PARAM_SERVICE_PORT_EXTRA_NAME, 5288)
-                .putExtra("wifi_info", wifiinfo)
-                .putExtra("PARAM_SERVICE_WIFI_NETWORK", WifiService.ns);
+        Intent i = new Intent("com.google.android.apps.auto.wireless.setup.receiver.wirelessstartup.START");
+        i.setClassName("com.google.android.projection.gearhead", "com.google.android.apps.auto.wireless.setup.receiver.WirelessStartupReceiver");
+        i.putExtra("ip_address", ip);
+        i.putExtra("projection_port", port);
 
-        return androidAutoWirelessIntent;
+        context.sendBroadcast(i);
+
+
     }
 
     public Boolean isWiFiConnected() {
@@ -117,7 +116,7 @@ public class Connector {
                         throw new RuntimeException(e);
                     }
                     if (!WifiService.connected.get())
-                        context.startActivity(getAAIntent(hostIpAddress,checkWifi));
+                        getAAIntent(hostIpAddress,context,5288);
                     ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(CONNECTIVITY_SERVICE);
                     connectivityManager.unregisterNetworkCallback(this);
                 }
@@ -132,7 +131,7 @@ public class Connector {
         else
         {
             if (!WifiService.connected.get())
-                context.startActivity(getAAIntent(hostIpAddress,checkWifi));
+                getAAIntent(hostIpAddress,context,5288);
         }
     }
 

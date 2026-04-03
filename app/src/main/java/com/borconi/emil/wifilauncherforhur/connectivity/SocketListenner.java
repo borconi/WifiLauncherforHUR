@@ -36,7 +36,7 @@ public class SocketListenner extends Connector implements Runnable{
                 startAA(hostIpAddress,true);
 
 
-                Log.d("HU","Start Activity called: "+getAAIntent(hostIpAddress, true));
+
             } catch (Exception e) {
             }
         }

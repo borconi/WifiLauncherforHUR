@@ -3,7 +3,7 @@
     <string-array name="wifi_mode_value">
         <item>@string/network_discovery</item>
         <item>@string/use_wifip2p</item>
-        <!-- <item>@string/use_wifi_nearby</item> -->
+        <item>@string/use_wifi_nearby</item>
         <item>@string/tether</item>
         <item>@string/client_mode</item>
 
@@ -11,9 +11,10 @@
     <string-array name="wifi_mode_description">
         <item>1</item>
         <item>2</item>
-        <!-- <item>3</item> -->
+        <item>3</item>
         <item>4</item>
         <item>5</item>
 >
     </string-array>
+    <string name="use_wifi_nearby">Use Nearby Devices</string>
 </resources>

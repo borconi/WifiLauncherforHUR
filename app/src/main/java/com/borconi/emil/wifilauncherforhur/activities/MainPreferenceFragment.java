@@ -233,6 +233,18 @@ public class MainPreferenceFragment extends PreferenceFragmentCompat {
         tryPopulateBluetoothDevices((EmptyListPreference) bluetoothDevicesPreference);
         setBluetoothDevicesSummary(bluetoothDevices);
         updatePermissionsStatusPreference();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED ||
+                    ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+
+                // Request the permissions from the user
+                ActivityCompat.requestPermissions(getActivity(), new String[]{
+                        Manifest.permission.BLUETOOTH_ADVERTISE,
+                        Manifest.permission.BLUETOOTH_SCAN,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                }, 101);
+            }
+        }
 
 
     }
