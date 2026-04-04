@@ -242,7 +242,6 @@ class MainViewModel(
                 ConnectionModeItem("1", appContext.getString(R.string.network_discovery)),
                 ConnectionModeItem("2", appContext.getString(R.string.use_wifip2p)),
                 ConnectionModeItem("3", appContext.getString(R.string.use_wifi_nearby)),
-                ConnectionModeItem("4", appContext.getString(R.string.tether)),
                 ConnectionModeItem("5", appContext.getString(R.string.client_mode)),
             )
         )
@@ -254,16 +253,22 @@ class MainViewModel(
         val lastAcknowledgedVersion = prefs.getInt("last_acknowledged_version", 0)
 
         _uiState.update {
+            var currentMode = prefs.getString("connection_mode", "1") ?: "1"
+            if (currentMode == "4") {
+                currentMode = "1"
+                prefs.edit { putString("connection_mode", "1") }
+            }
+
             it.copy(
                 serviceRunning = WifiService.isRunning(),
-                connectionMode = prefs.getString("connection_mode", "1") ?: "1",
+                connectionMode = currentMode,
                 hurP2pName = prefs.getString("hur_p2p_name", "HUR7") ?: "HUR7",
                 keepRunning = prefs.getBoolean("keep_running", false),
                 ignoreBtDisconnect = prefs.getBoolean("ignore_bt_disconnect", false),
                 selectedBluetoothDevices = prefs.getStringSet("selected_bluetooth_devices", emptySet()) ?: emptySet(),
                 showMajorChangesDialog = !dismissedInSession && (lastAcknowledgedVersion < currentVersion),
                 permissionItems = buildPermissionItems(context),
-                bondedBluetoothDevices = loadBondedDevices(context),
+                bondedBluetoothDevices = if (it.bondedBluetoothDevices.isEmpty()) loadBondedDevices(context) else it.bondedBluetoothDevices,
             )
         }
     }
@@ -529,7 +534,6 @@ private fun MainScreen(
                 WirelessSettingsCard(
                     state = state,
                     onChangeConnectionMode = onChangeConnectionMode,
-                    onHurP2pNameChange = onHurP2pNameChange,
                     onKeepRunningChange = onKeepRunningChange,
                     onIgnoreBtDisconnectChange = onIgnoreBtDisconnectChange,
                 )
@@ -670,7 +674,6 @@ private fun PermissionCard(items: List<PermissionItem>, onFix: (PermissionAction
 private fun WirelessSettingsCard(
     state: MainUiState,
     onChangeConnectionMode: (String) -> Unit,
-    onHurP2pNameChange: (String) -> Unit,
     onKeepRunningChange: (Boolean) -> Unit,
     onIgnoreBtDisconnectChange: (Boolean) -> Unit,
 ) {
@@ -681,17 +684,6 @@ private fun WirelessSettingsCard(
                 selected = state.connectionMode,
                 onSelected = onChangeConnectionMode,
             )
-            if (state.connectionMode == "2") {
-                OutlinedTextField(
-                    value = state.hurP2pName,
-                    onValueChange = onHurP2pNameChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.hur_p2p_name)) },
-                    supportingText = { Text(stringResource(R.string.hur_p2p_name_desc)) },
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                    singleLine = true,
-                )
-            }
             SwitchRow(
                 title = stringResource(R.string.auto_reconnect),
                 subtitle = stringResource(R.string.auto_reconnect_desc),

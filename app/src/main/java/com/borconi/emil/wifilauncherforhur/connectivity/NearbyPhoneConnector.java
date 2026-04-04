@@ -64,7 +64,9 @@ public class NearbyPhoneConnector extends Connector {
                     PayloadCallback payloadCallback = new PayloadCallback() {
                         @Override
                         public void onPayloadReceived(String endpointId, Payload payload) {
+                            Log.d(TAG, "Phone onPayloadReceived type=" + payload.getType());
                             if (payload.getType() == Payload.Type.STREAM) {
+                                Log.d(TAG, "Phone received car->phone STREAM payload");
                                 inoutstream.setIncomingStream(payload.asStream().asInputStream());
                             }
                         }

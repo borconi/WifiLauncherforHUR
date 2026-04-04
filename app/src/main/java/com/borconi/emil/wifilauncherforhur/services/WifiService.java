@@ -102,18 +102,14 @@ public class WifiService extends Service {
     public void onCreate() {
         super.onCreate();
         mustexit = false;
-        System.setProperty("dexmaker.dexcache", getCacheDir().getPath());
+
 
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
         verifyOrCreateNotificationChannels();
         notification = getNotification(this, getString(R.string.service_wifi_looking_text));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification.build(),
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC );
-        } else {
-            startForeground(NOTIFICATION_ID, notification.build());
-        }
+        startForeground(NOTIFICATION_ID, notification.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC );
+
 
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -465,7 +461,7 @@ public class WifiService extends Service {
                 byte[] buffer = new byte[16384];
                 int read;
                 while ((read = in.read(buffer)) != -1) {
-                    Log.d("StreamCopier", "copied " + read + " bytes");
+
                     out.write(buffer, 0, read);
                     out.flush();
                 }
