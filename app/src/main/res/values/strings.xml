@@ -24,11 +24,11 @@
     <string name="status_denied_permissions">Oh no! There are permissions denied or battery optimization is enforced, tap here to fix it</string>
     <string name="app_widget_paused">Paused</string>
     <string name="app_widget_running">Running</string>
-    <string name="major_title">Major changes!</string>
-    <string name="major_desc">Due to recent limitations added in Android 10 and above, previous methods of wireless connections are not available any longer!\n\nThe new approach will start AA Wireless session when both devices are on the same network, regardless of which device creates the hotspot. \n\nYou need to make sure you update HUR to version 7.0!</string>
+    <string name="major_title">Update notice!</string>
+    <string name="major_desc">Please note that this version of WiFi Launcher works only with HUR 8.0 and above.</string>
     <string name="nobt">Nearby permissions must be enable to access Bluetooth functionality</string>
     <string name="System_settings_desc">We need to modify system settings in order to toggle the hotspot on and off when connecting to your cars BT.</string>
-    <string name="save">Understood</string>
+    <string name="save">Don\'t show again</string>
     <string name="close">Close</string>
     <string name="connectedtocar">Connected to HUR</string>
     <string name="legacy_mode">Legacy Mode</string>

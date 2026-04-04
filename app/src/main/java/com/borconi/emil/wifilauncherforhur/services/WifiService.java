@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -107,7 +108,13 @@ public class WifiService extends Service {
 
         verifyOrCreateNotificationChannels();
         notification = getNotification(this, getString(R.string.service_wifi_looking_text));
-        startForeground(NOTIFICATION_ID, notification.build());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification.build(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC );
+        } else {
+            startForeground(NOTIFICATION_ID, notification.build());
+        }
+
 
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         int connectionmode = Integer.parseInt(sharedPreferences.getString("connection_mode", "1"));
@@ -134,7 +141,7 @@ public class WifiService extends Service {
         localSocketListener.startListening();
 
         isRunning = true;
-        CarConnection carConnection = new CarConnection(this);
+        CarConnection carConnection = new CarConnection(getApplicationContext());
         typeLiveData = carConnection.getType();
         typeLiveData.observeForever(AAObserver);
     }
@@ -161,31 +168,21 @@ public class WifiService extends Service {
         String targetIp = currentPeerIp;
         InOutStream targetNearbyStream = nearbyStream;
 
-        if (targetIp == null && targetNearbyStream == null) {
+
+        if (currentPeerIp == null && nearbyStream == null) {
             Log.w("WifiService", "Local connection received, but no peer IP or Nearby stream is registered yet. Dropping connection.");
             try { localSocket.close(); } catch (Exception ignored) {}
             return;
         }
-
-        if (targetNearbyStream != null) {
-            // MODE 3: Route directly into the Nearby Connections Payload Stream
-            Log.d("WifiService", "Local connection accepted. Routing to Nearby Connections InOutStream");
-            new Thread(() -> {
-                try {
-                    // Start bidirectional pumping threads
-                    new Thread(new StreamCopier(localSocket.getInputStream(), targetNearbyStream.getOutputStream())).start();
-                    new Thread(new StreamCopier(targetNearbyStream.getInputStream(), localSocket.getOutputStream())).start();
-                } catch (Exception e) {
-                    Log.e("WifiService", "Error establishing route to Nearby stream", e);
-                    try { localSocket.close(); } catch (Exception ignored) {}
-                }
-            }).start();
-        } else {
             // MODES 1, 2, 4, 5: Route over standard TCP IP Socket
             Log.d("WifiService", "Local connection accepted. Routing to " + targetIp + ":5288");
             new Thread(() -> {
+                Socket remoteSocket;
                 try {
-                    Socket remoteSocket = new Socket(targetIp, 5288);
+                    if (targetNearbyStream != null)
+                        remoteSocket=targetNearbyStream;
+                    else
+                        remoteSocket= new Socket(targetIp, 5288);
                     // Start bidirectional pumping threads
                     new Thread(new StreamCopier(localSocket.getInputStream(), remoteSocket.getOutputStream())).start();
                     new Thread(new StreamCopier(remoteSocket.getInputStream(), localSocket.getOutputStream())).start();
@@ -194,7 +191,7 @@ public class WifiService extends Service {
                     try { localSocket.close(); } catch (Exception ignored) {}
                 }
             }).start();
-        }
+
     }
 
     private final Observer<Integer> AAObserver = new Observer<Integer>() {
@@ -468,6 +465,7 @@ public class WifiService extends Service {
                 byte[] buffer = new byte[16384];
                 int read;
                 while ((read = in.read(buffer)) != -1) {
+                    Log.d("StreamCopier", "copied " + read + " bytes");
                     out.write(buffer, 0, read);
                     out.flush();
                 }

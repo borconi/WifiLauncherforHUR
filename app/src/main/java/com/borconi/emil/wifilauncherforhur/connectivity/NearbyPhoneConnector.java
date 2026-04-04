@@ -15,6 +15,9 @@ import com.google.android.gms.nearby.connection.ConnectionInfo;
 import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback;
 import com.google.android.gms.nearby.connection.ConnectionResolution;
 import com.google.android.gms.nearby.connection.ConnectionsStatusCodes;
+import com.google.android.gms.nearby.connection.Payload;
+import com.google.android.gms.nearby.connection.PayloadCallback;
+import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
 
 public class NearbyPhoneConnector extends Connector {
@@ -55,10 +58,21 @@ public class NearbyPhoneConnector extends Connector {
                     Log.d(TAG, "Car requested connection: " + connectionInfo.getEndpointName());
 
                     // 1. Create the stream object (It acts as the PayloadCallback)
-                    inoutstream = new InOutStream(context, endpointId, connectionInfo);
+                    inoutstream = new InOutStream(context, endpointId);
 
-                    // 2. Automatically accept the connection request from the car
-                    Nearby.getConnectionsClient(context).acceptConnection(endpointId, inoutstream);
+                    // Create an anonymous PayloadCallback just to catch the incoming stream
+                    PayloadCallback payloadCallback = new PayloadCallback() {
+                        @Override
+                        public void onPayloadReceived(String endpointId, Payload payload) {
+                            if (payload.getType() == Payload.Type.STREAM) {
+                                inoutstream.setIncomingStream(payload.asStream().asInputStream());
+                            }
+                        }
+
+                        @Override
+                        public void onPayloadTransferUpdate(String endpointId, PayloadTransferUpdate update) {}
+                    };
+                    Nearby.getConnectionsClient(context).acceptConnection(endpointId, payloadCallback);
                 }
 
                 @Override
@@ -70,6 +84,10 @@ public class NearbyPhoneConnector extends Connector {
 
                             // Stop advertising so other cars can't try to connect to us
                             Nearby.getConnectionsClient(context).stopAdvertising();
+
+                            if (inoutstream != null) {
+                                inoutstream.startOutgoingStream();
+                            }
 
                             // 3. Start routing Android Auto data
                             try {

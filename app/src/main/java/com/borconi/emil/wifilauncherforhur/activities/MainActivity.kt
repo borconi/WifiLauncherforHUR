@@ -18,6 +18,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +38,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,21 +47,25 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -65,7 +74,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -86,6 +98,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,6 +114,7 @@ import com.borconi.emil.wifilauncherforhur.BuildConfig
 import com.borconi.emil.wifilauncherforhur.R
 import com.borconi.emil.wifilauncherforhur.services.WifiService
 import com.borconi.emil.wifilauncherforhur.activities.ui.theme.WifiLauncherTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -134,6 +148,11 @@ class MainActivity : ComponentActivity() {
                     openWriteSettings = { openWriteSettings() },
                     openBatterySettings = { openBatteryOptimizationSettings() },
                     startService = { startForegroundService(Intent(this, WifiService::class.java)) },
+                    stopService = {
+                        val stopIntent = Intent(this, WifiService::class.java)
+                        stopIntent.action = WifiService.ACTION_FOREGROUND_STOP
+                        startForegroundService(stopIntent)
+                    },
                     enableBluetooth = { startActivity(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) },
                 )
             }
@@ -215,6 +234,8 @@ class MainViewModel(
     private val prefs: SharedPreferences,
 ) : ViewModel() {
 
+    private var dismissedInSession = false
+
     private val _uiState = MutableStateFlow(
         MainUiState(
             connectionModes = listOf(
@@ -229,6 +250,9 @@ class MainViewModel(
     val uiState: StateFlow<MainUiState> = _uiState
 
     fun refreshAll(context: Context) {
+        val currentVersion = BuildConfig.VERSION_CODE
+        val lastAcknowledgedVersion = prefs.getInt("last_acknowledged_version", 0)
+
         _uiState.update {
             it.copy(
                 serviceRunning = WifiService.isRunning(),
@@ -237,7 +261,7 @@ class MainViewModel(
                 keepRunning = prefs.getBoolean("keep_running", false),
                 ignoreBtDisconnect = prefs.getBoolean("ignore_bt_disconnect", false),
                 selectedBluetoothDevices = prefs.getStringSet("selected_bluetooth_devices", emptySet()) ?: emptySet(),
-                showMajorChangesDialog = !prefs.getBoolean("nowarning", false),
+                showMajorChangesDialog = !dismissedInSession && (lastAcknowledgedVersion < currentVersion),
                 permissionItems = buildPermissionItems(context),
                 bondedBluetoothDevices = loadBondedDevices(context),
             )
@@ -286,8 +310,11 @@ class MainViewModel(
         _uiState.update { it.copy(selectedBluetoothDevices = values) }
     }
 
-    fun dismissMajorDialog() {
-        prefs.edit { putBoolean("nowarning", true) }
+    fun dismissMajorDialog(forever: Boolean) {
+        if (forever) {
+            prefs.edit { putInt("last_acknowledged_version", BuildConfig.VERSION_CODE) }
+        }
+        dismissedInSession = true
         _uiState.update { it.copy(showMajorChangesDialog = false) }
     }
 
@@ -400,13 +427,17 @@ private fun MainRoute(
     openWriteSettings: () -> Unit,
     openBatterySettings: () -> Unit,
     startService: () -> Unit,
+    stopService: () -> Unit,
     enableBluetooth: () -> Unit,
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateCompat()
 
     LaunchedEffect(Unit) {
-        viewModel.refreshAll(context)
+        while(true) {
+            viewModel.refreshAll(context)
+            delay(1500)
+        }
     }
 
     MainScreen(
@@ -422,7 +453,10 @@ private fun MainRoute(
                 PermissionAction.ENABLE_BLUETOOTH -> enableBluetooth()
             }
         },
-        onStartService = startService,
+        onToggleService = {
+            if (state.serviceRunning) stopService() else startService()
+            viewModel.refreshAll(context)
+        },
         onChangeConnectionMode = { viewModel.setConnectionMode(context, it) },
         onHurP2pNameChange = viewModel::setHurP2pName,
         onKeepRunningChange = viewModel::setKeepRunning,
@@ -431,12 +465,13 @@ private fun MainRoute(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreen(
     state: MainUiState,
-    onDismissMajorChanges: () -> Unit,
+    onDismissMajorChanges: (Boolean) -> Unit,
     onRequestPermissionFix: (PermissionAction) -> Unit,
-    onStartService: () -> Unit,
+    onToggleService: () -> Unit,
     onChangeConnectionMode: (String) -> Unit,
     onHurP2pNameChange: (String) -> Unit,
     onKeepRunningChange: (Boolean) -> Unit,
@@ -473,12 +508,6 @@ private fun MainScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                HeroCard(
-                    allPermissionsGranted = state.allPermissionsGranted,
-                    onStartService = onStartService,
-                )
-            }
-            item {
                 PermissionCard(
                     items = state.permissionItems,
                     onFix = onRequestPermissionFix,
@@ -506,11 +535,28 @@ private fun MainScreen(
                 )
             }
             item {
-                SectionCard(title = "Tools", icon = Icons.Rounded.PlayArrow) {
-                    Button(onClick = onStartService, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null)
+                SectionCard(title = "Tools", icon = Icons.Rounded.PowerSettingsNew) {
+                    val containerColor by animateColorAsState(
+                        if (state.serviceRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        label = "buttonColor"
+                    )
+                    Button(
+                        onClick = onToggleService,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = containerColor,
+                            contentColor = if (state.serviceRunning) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (state.serviceRunning) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
+                            contentDescription = null
+                        )
                         Spacer(Modifier.size(8.dp))
-                        Text(stringResource(R.string.settings_advanced_options_start_service_manually_title))
+                        Text(
+                            if (state.serviceRunning) "Stop Wi‑Fi service"
+                            else stringResource(R.string.settings_advanced_options_start_service_manually_title)
+                        )
                     }
                 }
             }
@@ -531,16 +577,16 @@ private fun MainScreen(
 
     if (state.showMajorChangesDialog) {
         AlertDialog(
-            onDismissRequest = onDismissMajorChanges,
+            onDismissRequest = { onDismissMajorChanges(false) },
             title = { Text(stringResource(R.string.major_title)) },
             text = { Text(stringResource(R.string.major_desc)) },
             confirmButton = {
-                TextButton(onClick = onDismissMajorChanges) {
+                TextButton(onClick = { onDismissMajorChanges(true) }) {
                     Text(stringResource(R.string.save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismissMajorChanges) {
+                TextButton(onClick = { onDismissMajorChanges(false) }) {
                     Text(stringResource(R.string.close))
                 }
             },
@@ -549,88 +595,72 @@ private fun MainScreen(
 }
 
 @Composable
-private fun HeroCard(allPermissionsGranted: Boolean, onStartService: () -> Unit) {
-    Card(
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.secondaryContainer,
-                        )
-                    )
-                )
-                .padding(20.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.22f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.PhoneAndroid, contentDescription = null)
-                    }
-                    Spacer(Modifier.size(12.dp))
-                    Column {
-                        Text("AAWireless‑style refresh", fontWeight = FontWeight.Bold, fontSize = 21.sp)
-                        Text(
-                            if (allPermissionsGranted) "Everything looks ready." else "Finish setup to make background launch reliable.",
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
-                        )
-                    }
-                }
-                Button(onClick = onStartService) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = null)
-                    Spacer(Modifier.size(8.dp))
-                    Text("Start Wi‑Fi service")
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun PermissionCard(items: List<PermissionItem>, onFix: (PermissionAction) -> Unit) {
-    SectionCard(title = stringResource(R.string.status), icon = Icons.Rounded.Notifications) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items.forEach { item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .clickable { if (!item.granted) onFix(item.action) }
-                        .padding(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+    val allGranted = items.all { it.granted }
+    var expanded by remember(allGranted) { mutableStateOf(!allGranted) }
+
+    Card(shape = RoundedCornerShape(28.dp)) {
+        Column(modifier = Modifier.padding(18.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { expanded = !expanded }
+                    .padding(vertical = 4.dp)
+            ) {
+                Icon(Icons.Rounded.Notifications, contentDescription = null)
+                Spacer(Modifier.size(10.dp))
+                Text(stringResource(R.string.status), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.weight(1f))
+                if (!expanded && allGranted) {
                     Icon(
-                        imageVector = if (item.granted) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline,
+                        imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = null,
-                        tint = if (item.granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
                     )
-                    Spacer(Modifier.size(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(item.title, fontWeight = FontWeight.Medium)
-                        Text(
-                            if (item.granted) "Granted" else "Needs attention",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (!item.granted) {
-                        TextButton(onClick = { onFix(item.action) }) {
-                            Text("Fix")
+                    Spacer(Modifier.size(8.dp))
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                    contentDescription = null
+                )
+            }
+            if (expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items.forEach { item ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .clickable { if (!item.granted) onFix(item.action) }
+                                .padding(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = if (item.granted) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline,
+                                contentDescription = null,
+                                tint = if (item.granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                            )
+                            Spacer(Modifier.size(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.title, fontWeight = FontWeight.Medium)
+                                Text(
+                                    if (item.granted) "Granted" else "Needs attention",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (!item.granted) {
+                                TextButton(onClick = { onFix(item.action) }) {
+                                    Text("Fix")
+                                }
+                            }
                         }
+                        Divider()
                     }
                 }
-                Divider()
             }
         }
     }
@@ -646,7 +676,7 @@ private fun WirelessSettingsCard(
 ) {
     SectionCard(title = stringResource(R.string.wireless), icon = Icons.Rounded.Wifi) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            ConnectionModeDropdown(
+            ConnectionModeSelector(
                 modes = state.connectionModes,
                 selected = state.connectionMode,
                 onSelected = onChangeConnectionMode,
@@ -679,37 +709,89 @@ private fun WirelessSettingsCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ConnectionModeDropdown(
+private fun ConnectionModeSelector(
     modes: List<ConnectionModeItem>,
     selected: String,
     onSelected: (String) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
     val current = modes.firstOrNull { it.value == selected }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth(),
-            value = current?.label.orEmpty(),
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(stringResource(R.string.wifi_connection_mode)) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-        )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            modes.forEach { mode ->
-                DropdownMenuItem(
-                    text = { Text(mode.label) },
-                    onClick = {
-                        onSelected(mode.value)
-                        expanded = false
-                    },
+
+    OutlinedCard(
+        onClick = { showDialog = true },
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.wifi_connection_mode),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = current?.label.orEmpty(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
+            Icon(Icons.Rounded.ChevronRight, contentDescription = null)
         }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(stringResource(R.string.wifi_connection_mode)) },
+            text = {
+                Column(modifier = Modifier.selectableGroup().verticalScroll(rememberScrollState())) {
+                    modes.forEach { mode ->
+                        val isSelected = mode.value == selected
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .selectable(
+                                    selected = isSelected,
+                                    onClick = {
+                                        onSelected(mode.value)
+                                        showDialog = false
+                                    },
+                                    role = Role.RadioButton
+                                )
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = null
+                            )
+                            Text(
+                                text = mode.label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -759,6 +841,7 @@ private fun LabeledValue(title: String, value: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StatusPill(running: Boolean) {
     AssistChip(

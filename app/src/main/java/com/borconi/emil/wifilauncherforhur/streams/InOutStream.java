@@ -1,145 +1,96 @@
 package com.borconi.emil.wifilauncherforhur.streams;
 
 import android.content.Context;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import com.google.android.gms.nearby.Nearby;
-import com.google.android.gms.nearby.connection.ConnectionInfo;
 import com.google.android.gms.nearby.connection.Payload;
-import com.google.android.gms.nearby.connection.PayloadCallback;
-import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.net.Socket;
 
-public class InOutStream extends PayloadCallback {
+public class InOutStream extends Socket {
 
     private static final String TAG = "InOutStream";
-
-    private final Context context; // Now passed securely via constructor
+    private final Context context;
     private final String endpointID;
-    private final ConnectionInfo connectionInfo;
 
-    // Increased buffer size to handle high-bandwidth Android Auto video streams
-    private final BlockingQueue<byte[]> freeInputBuffers = new ArrayBlockingQueue<>(2048);
+    // The Pipe where we write Android Auto data to be sent to the Car
+    private ParcelFileDescriptor.AutoCloseOutputStream outgoingStream;
 
-    public static InOutStream currentStream = null;
+    // The Stream where Google Play Services dumps data from the Car
+    private volatile InputStream incomingStream;
 
-    // --- The Standard Java I/O Stream Adapters ---
-    private final InputStream inputStreamAdapter;
-    private final OutputStream outputStreamAdapter;
-
-    // Constructor MUST require Context to initialize Nearby Connections
-    public InOutStream(Context context, String endpointId, ConnectionInfo connectionInfo) {
+    public InOutStream(Context context, String endpointId) {
         this.context = context.getApplicationContext();
         this.endpointID = endpointId;
-        this.connectionInfo = connectionInfo;
-        currentStream = this;
-
-        // Initialize the adapters that WifiService's StreamCopier will use
-        this.inputStreamAdapter = createInputStream();
-        this.outputStreamAdapter = createOutputStream();
     }
 
-    @Override
-    public void onPayloadReceived(String endpointId, Payload payload) {
-        // This receives the BYTES payload from the car and queues it for the InputStream to consume
-        if (payload.getType() == Payload.Type.BYTES) {
-            byte[] bytes = payload.asBytes();
-            if (bytes != null) {
-                freeInputBuffers.offer(bytes);
-            }
+    // Called when connection reaches STATUS_OK
+    public void startOutgoingStream() {
+        try {
+            ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
+            outgoingStream = new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1]);
+
+            // ---> THE FIX: Wrap the raw PFD in a safe Java InputStream <---
+            InputStream safeReadEnd = new ParcelFileDescriptor.AutoCloseInputStream(pipe[0]);
+
+            // Give the safe Java stream to Google
+            Payload streamPayload = Payload.fromStream(safeReadEnd);
+            Nearby.getConnectionsClient(context).sendPayload(endpointID, streamPayload);
+
+            Log.d(TAG, "Outgoing Phone->Car STREAM pipe created and sent.");
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to create outgoing pipe", e);
         }
     }
 
+    // Called by the Nearby PayloadCallback when the Car sends its stream
+    public void setIncomingStream(InputStream is) {
+        this.incomingStream = is;
+        Log.d(TAG, "Incoming Car->Phone STREAM received.");
+    }
+
+    // --- Exposed Standard Streams for StreamCopier ---
+
     @Override
-    public void onPayloadTransferUpdate(String endpointId, PayloadTransferUpdate update) {
-        // Bytes payloads fire SUCCESS immediately, nothing needed here.
-    }
-
-    // --- Provide Standard Streams for WifiService ---
-
     public InputStream getInputStream() {
-        return inputStreamAdapter;
-    }
-
-    public OutputStream getOutputStream() {
-        return outputStreamAdapter;
-    }
-
-    // --- The Adapter Implementations ---
-
-    /**
-     * Converts incoming Nearby Payload byte arrays back into a continuous InputStream.
-     */
-    private InputStream createInputStream() {
         return new InputStream() {
-            private byte[] currentChunk = null;
-            private int chunkPosition = 0;
-
             @Override
             public int read() throws IOException {
-                if (!ensureChunk()) return -1;
-                return currentChunk[chunkPosition++] & 0xFF;
+                waitForStream();
+                return incomingStream.read();
             }
 
             @Override
             public int read(byte[] b, int off, int len) throws IOException {
-                if (!ensureChunk()) return -1;
-
-                int available = currentChunk.length - chunkPosition;
-                int toCopy = Math.min(len, available);
-
-                System.arraycopy(currentChunk, chunkPosition, b, off, toCopy);
-                chunkPosition += toCopy;
-                return toCopy;
+                waitForStream();
+                return incomingStream.read(b, off, len);
             }
 
-            private boolean ensureChunk() {
-                while (currentChunk == null || chunkPosition >= currentChunk.length) {
+            private void waitForStream() throws IOException {
+                // Safely block the StreamCopier thread until the Car's payload arrives
+                while (incomingStream == null) {
                     try {
-                        // Blocks until the car sends a new Payload over Nearby Connections
-                        currentChunk = freeInputBuffers.take();
-                        chunkPosition = 0;
+                        Thread.sleep(10);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        return false;
+                        throw new IOException("Stream wait interrupted", e);
                     }
                 }
-                return true;
             }
         };
     }
 
-    /**
-     * Converts continuous OutputStream writes into outgoing Nearby Payloads.
-     */
-    private OutputStream createOutputStream() {
-        return new OutputStream() {
-            @Override
-            public void write(int b) throws IOException {
-                write(new byte[]{(byte) b});
-            }
-
-            @Override
-            public void write(byte[] b, int off, int len) throws IOException {
-                if (connectionInfo == null) return;
-
-                // Extract the exact byte bounds
-                byte[] dataToSend = new byte[len];
-                System.arraycopy(b, off, dataToSend, 0, len);
-
-                try {
-                    Payload bytesPayload = Payload.fromBytes(dataToSend);
-                    Nearby.getConnectionsClient(context).sendPayload(endpointID, bytesPayload);
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to send payload to car", e);
-                    throw new IOException("Failed to send Nearby payload", e);
-                }
-            }
-        };
+    @Override
+    public OutputStream getOutputStream() {
+        // Ensure the pipe is built before StreamCopier tries to write to it
+        while (outgoingStream == null) {
+            try { Thread.sleep(10); } catch (Exception ignored) {}
+        }
+        return outgoingStream;
     }
 }
